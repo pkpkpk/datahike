@@ -1,5 +1,6 @@
 (ns ^:no-doc datahike.array
-  #?(:clj (:require [hitchhiker.tree.node :as n]))
+  #?(:clj (:require [hitchhiker.tree.node :as n]
+                    [goog.array]))
   #?(:clj (:import [java.util Arrays])))
 
 #?(:clj
@@ -52,8 +53,9 @@
   "Extension of Clojure's equality to things we also want to treat like values,
   e.g. certain array types."
   [a b]
-  (or (= a b)
-      #?(:clj (and (bytes? a)
+  #?(:clj (or (= a b)
+              (and (bytes? a)
                    (bytes? b)
-                   (zero? (compare-arrays a b)))
-         :cljs (zero? (compare-arrays a b)))))
+                   (zero? (compare-arrays a b))))
+     :cljs (or (identical? a b)
+               (zero? (goog.array/compare3 a b)))))
