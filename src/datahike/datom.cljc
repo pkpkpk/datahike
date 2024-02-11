@@ -168,17 +168,18 @@
 ;; datom cmp macros/funcs
 ;;
 
-(defmacro combine-cmp [& comps]
-  (loop [comps (reverse comps)
-         res (num 0)]
-    (if (not-empty comps)
-      (recur
-        (next comps)
-        `(let [c# ~(first comps)]
-           (if (== 0 c#)
-             ~res
-             c#)))
-      res)))
+#?(:clj
+   (defmacro combine-cmp [& comps]
+     (loop [comps (reverse comps)
+            res (num 0)]
+       (if (not-empty comps)
+         (recur
+           (next comps)
+           `(let [c# ~(first comps)]
+              (if (== 0 c#)
+                ~res
+                c#)))
+         res))))
 
 (defn cmp [o1 o2]
   (if (nil? o1) 0

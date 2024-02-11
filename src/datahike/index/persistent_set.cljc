@@ -113,7 +113,7 @@
     (psset/walk-addresses pset (fn [address] (swap! addresses conj address)))
     @addresses))
 
-(extend-type PersistentSortedSet
+(extend-type #?(:clj PersistentSortedSet :cljs psset/BTSet)
   IIndex
   (-slice [^PersistentSortedSet pset from to index-type]
     (slice pset from to index-type))
