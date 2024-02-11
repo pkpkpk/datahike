@@ -1,8 +1,10 @@
 (ns ^:no-doc datahike.index.persistent-set
   (:require [me.tonsky.persistent-sorted-set :as psset]
             [me.tonsky.persistent-sorted-set.arrays :as arrays]
-            [clojure.core.cache :as cache]
-            [clojure.core.cache.wrapped :as wrapped]
+            #?@(:clj [[clojure.core.cache :as cache]
+                      [clojure.core.cache.wrapped :as wrapped]]
+                :cljs [[cljs.cache :as cache]
+                       [cljs.cache.wrapped :as wrapped]])
             [datahike.datom :as dd]
             [datahike.constants :refer [tx0 txmax]]
             [datahike.index.interface :as di :refer [IIndex]]
