@@ -119,7 +119,7 @@
          :else
          (-> (dbi/-datoms db :avet eid) first :e)))
 
-     #?@(:cljs [(array? eid) (recur db (array-seq eid))])
+     #?@(:cljs [(array? eid) (recur db (array-seq eid) error-code)])
 
      (keyword? eid)
      (-> (dbi/-datoms db :avet [:db/ident eid]) first :e)
