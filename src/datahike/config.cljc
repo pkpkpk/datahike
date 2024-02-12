@@ -3,11 +3,13 @@
             [clojure.walk :refer [postwalk]]
             [clojure.string :as str]
             [clojure.spec.alpha :as s]
+            #?(:cljs [cljs-node-io.core :refer [slurp]])
             [environ.core :refer [env]]
             [datahike.tools :as dt]
             [datahike.store :as ds]
             [datahike.index :as di])
-  (:import [java.net URI]))
+  (:import #?(:clj [java.net URI]
+              :cljs [goog.Uri])))
 
 (def ^:dynamic *default-index* :datahike.index/persistent-set)
 (def ^:dynamic *default-schema-flexibility* :write)
@@ -78,7 +80,7 @@
                         :path path
                         :host host
                         :port port
-                        :id (str (java.util.UUID/randomUUID))}
+                        :id (str (random-uuid))}
                    :level {:path path}
                    :file {:path path}))
    :index index
@@ -96,19 +98,19 @@
 (defn int-from-env
   [key default]
   (try
-    (Integer/parseInt (get env key (str default)))
-    (catch Exception _ default)))
+    (#?(:clj Integer/parseInt :cljs js/parseInt) (get env key (str default)))
+    (catch #?(:clj Exception :cljs js/Error) _ default)))
 
 (defn bool-from-env
   [key default]
   (try
-    (Boolean/parseBoolean (get env key default))
-    (catch Exception _ default)))
+    (#?(:clj Boolean/parseBoolean :cljs parse-boolean) (get env key default))
+    (catch #?(:clj Exception :cljs js/Error) _ default)))
 
 (defn map-from-env [key default]
   (try
     (edn/read-string (get env key (str default)))
-    (catch Exception _ default)))
+    (catch #?(:clj Exception :cljs js/Error) _ default)))
 
 (defn validate-config-attribute [attribute value config]
   (when-not (s/valid? attribute value)
@@ -186,7 +188,7 @@
      (when (and attribute-refs? (= :read schema-flexibility))
        (throw (ex-info "Attribute references cannot be used with schema-flexibility ':read'." config)))
      (if (string? initial-tx)
-       (update merged-config :initial-tx (fn [path] (-> path slurp read-string)))
+       (update merged-config :initial-tx (fn [path] (-> path slurp edn/read-string)))
        merged-config))))
 
 ;; deprecation begin
@@ -201,11 +203,29 @@
 (s/def :datahike/config-depr (s/keys :req-un [::backend]
                                      :opt-un [::username ::password ::path ::host ::port]))
 
+#?(:cljs
+   ;; TODO chatgpt garbage i cant be bothered to test rn. -Pat
+   (defn get-scheme-specific-part [uri]
+     (let [scheme-specific-part (if (.hasDomain uri)
+                                  (str "//" (.getDomain uri))
+                                  "")
+           scheme-specific-part (if (.hasPort uri)
+                                  (str scheme-specific-part ":" (.getPort uri))
+                                  scheme-specific-part)
+           scheme-specific-part (str scheme-specific-part (.getPath uri))
+           scheme-specific-part (if (.hasQuery uri)
+                                  (str scheme-specific-part "?" (.getQuery uri))
+                                  scheme-specific-part)]
+       (if (.hasFragment uri)
+         (str scheme-specific-part "#" (.getFragment uri))
+         scheme-specific-part))))
+
 (defn uri->config [uri]
-  (let [base-uri (URI. uri)
+  (let [base-uri (#?(:clj URI. :cljs goog.Uri.) uri)
         _ (when-not (= (.getScheme base-uri) "datahike")
             (throw (ex-info "URI scheme is not datahike conform." {:uri uri})))
-        sub-uri (URI. (.getSchemeSpecificPart base-uri))
+        sub-uri (#?(:clj URI. :cljs goog.Uri.) (#?(:clj .getSchemeSpecificPart
+                                                   :cljs get-scheme-specific-part) base-uri))
         backend (keyword (.getScheme sub-uri))
         [username password] (when-let [user-info (.getUserInfo sub-uri)]
                               (str/split user-info #":"))
