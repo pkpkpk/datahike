@@ -20,7 +20,8 @@
         org.babashka/http-client                    {:mvn/version "0.3.11"}
         metosin/jsonista                            {:mvn/version "0.3.7"}
         io.github.pkpkpk/cljs-cache                 {:git/tag "datahike-fix"
-                                                     :git/sha "b4d53bc"}}
+                                                     :git/sha "b4d53bc"}
+        tailrecursion/cljs-priority-map {:mvn/version "1.2.1"}}
 
  :paths ["src" "target/classes" "resources"]
 

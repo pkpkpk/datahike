@@ -1,6 +1,8 @@
 (ns ^:no-doc datahike.lru
-  (:require [clojure.core.cache :refer [defcache CacheProtocol]]
-            clojure.data.priority-map))
+  (:require #?(:clj [clojure.core.cache :refer [defcache CacheProtocol]]
+               :cljs [cljs.cache :refer [defcache CacheProtocol]])
+            #?(:clj clojure.data.priority-map
+               :cljs tailrecursion.priority-map)))
 
 (declare assoc-lru cleanup-lru)
 
@@ -119,7 +121,8 @@
            this))
   (seed [_ base]
         (LRUDatomCache. base
-                        (into (clojure.data.priority-map/priority-map)
+                        (into #?(:clj (clojure.data.priority-map/priority-map)
+                                 :cljs (tailrecursion.priority-map/priority-map))
                               (map #(vector % 0)
                                    (keys base)))
                         (into {}
@@ -140,4 +143,5 @@
   [base & {threshold :threshold :or {threshold 32}}]
   {:pre [(number? threshold) (< 0 threshold)
          (map? base)]}
-  (atom (clojure.core.cache/seed (LRUDatomCache. {} (clojure.data.priority-map/priority-map) {} 0 0 threshold) base)))
+  #?(:clj (atom (clojure.core.cache/seed (LRUDatomCache. {} (clojure.data.priority-map/priority-map) {} 0 0 threshold) base))
+     :cljs (atom (cljs.cache/seed (LRUDatomCache. {} (tailrecursion.priority-map/priority-map) {} 0 0 threshold) base))))
