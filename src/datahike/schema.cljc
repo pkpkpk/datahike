@@ -4,11 +4,11 @@
   #?(:clj (:import [datahike.datom Datom])))
 
 #?(:cljs
-   (defn safe-integer? [n]
+   (defn ^boolean safe-integer? [n]
      (js/Number.isSafeInteger n)))
 
 #?(:cljs
-   (defn bytes? [a]
+   (defn ^boolean bytes? [a]
      (or (instance? js/Uint8Array a)
          (instance? js/Int8Array a)
          (instance? js/Uint8ClampedArray a))))
