@@ -228,6 +228,7 @@
                   (dd/diff-sorted datoms-a datoms-b dd/cmp-datoms-eavt-quick))))
 
 #?(:cljs
+   ;; workaround for multiple implementations warnings
    (extend-type DB
      IHash (-hash [^DB db] (:hash db))
      IEquiv (-equiv [^DB db other] (equiv-db db other))
@@ -235,339 +236,336 @@
      ISeqable (-seq [^DB db] (di/-seq (:eavt db)))
      IPrintWithWriter (-pr-writer [^DB db w opts] (pr-db db w opts))))
 
-; ;; FilteredDB
-;
-; (defrecord-updatable FilteredDB [unfiltered-db pred]
-;   #?@(:cljs
-;       [IEquiv (-equiv [db other] (equiv-db db other))
-;        ISeqable (-seq [db] (dbi/-datoms db :eavt []))
-;        ICounted (-count [db] (count (dbi/-datoms db :eavt [])))
-;        IPrintWithWriter (-pr-writer [db w opts] (pr-db db w opts))
-;
-;        IEmptyableCollection (-empty [_] (throw (js/Error. "-empty is not supported on FilteredDB")))
-;        IEmptyableCollection (-empty [_] (throw (js/Error. "-empty is not supported on FilteredDB")))
-;
-;        ILookup (-lookup ([_ _] (throw (js/Error. "-lookup is not supported on FilteredDB")))
-;                         ([_ _ _] (throw (js/Error. "-lookup is not supported on FilteredDB"))))
-;
-;        IAssociative (-contains-key? [_ _] (throw (js/Error. "-contains-key? is not supported on FilteredDB")))
-;        (-assoc [_ _ _] (throw (js/Error. "-assoc is not supported on FilteredDB")))]
-;
-;       :clj
-;       [IPersistentCollection
-;        (count [db] (count (dbi/-datoms db :eavt [])))
-;        (equiv [db o] (equiv-db db o))
-;        (cons [db [k v]] (throw (UnsupportedOperationException. "cons is not supported on FilteredDB")))
-;        (empty [db] (throw (UnsupportedOperationException. "empty is not supported on FilteredDB")))
-;
-;        Seqable (seq [db] (dbi/-datoms db :eavt []))
-;
-;        clojure.lang.ILookup (valAt [db k] (throw (UnsupportedOperationException. "valAt/2 is not supported on FilteredDB")))
-;        (valAt [db k nf] (throw (UnsupportedOperationException. "valAt/3 is not supported on FilteredDB")))
-;        clojure.lang.IKeywordLookup (getLookupThunk [db k]
-;                                                    (throw (UnsupportedOperationException. "getLookupThunk is not supported on FilteredDB")))
-;
-;        Associative
-;        (containsKey [e k] (throw (UnsupportedOperationException. "containsKey is not supported on FilteredDB")))
-;        (entryAt [db k] (throw (UnsupportedOperationException. "entryAt is not supported on FilteredDB")))
-;        (assoc [db k v] (throw (UnsupportedOperationException. "assoc is not supported on FilteredDB")))])
-;
-;   dbi/IDB
-;   (-schema [db] (dbi/-schema unfiltered-db))
-;   (-rschema [db] (dbi/-rschema unfiltered-db))
-;   (-system-entities [db] (dbi/-system-entities unfiltered-db))
-;   (-attrs-by [db property] (dbi/-attrs-by unfiltered-db property))
-;   (-temporal-index? [db] (dbi/-keep-history? db))
-;   (-keep-history? [db] (dbi/-keep-history? unfiltered-db))
-;   (-max-tx [db] (dbi/-max-tx unfiltered-db))
-;   (-max-eid [db] (dbi/-max-eid unfiltered-db))
-;   (-config [db] (dbi/-config unfiltered-db))
-;   (-ref-for [db a-ident] (dbi/-ref-for unfiltered-db a-ident))
-;   (-ident-for [db a-ref] (dbi/-ident-for unfiltered-db a-ref))
-;
-;   dbi/ISearch
-;   (-search [db pattern]
-;            (filter (.-pred db) (dbi/-search unfiltered-db pattern)))
-;
-;   dbi/IIndexAccess
-;   (-datoms [db index cs]
-;            (filter (.-pred db) (dbi/-datoms unfiltered-db index cs)))
-;
-;   (-seek-datoms [db index cs]
-;                 (filter (.-pred db) (dbi/-seek-datoms unfiltered-db index cs)))
-;
-;   (-rseek-datoms [db index cs]
-;                  (filter (.-pred db) (dbi/-rseek-datoms unfiltered-db index cs)))
-;
-;   (-index-range [db attr start end]
-;                 (filter (.-pred db) (dbi/-index-range unfiltered-db attr start end))))
-;
-; ;; HistoricalDB
-;
-; (defrecord-updatable HistoricalDB [origin-db]
-;   #?@(:cljs
-;       [IEquiv (-equiv [db other] (equiv-db db other))
-;        ISeqable (-seq [db] (dbi/-datoms db :eavt []))
-;        ICounted (-count [db] (count (dbi/-datoms db :eavt [])))
-;        IPrintWithWriter (-pr-writer [db w opts] (pr-db db w opts))
-;
-;        IEmptyableCollection (-empty [_] (throw (js/Error. "-empty is not supported on HistoricalDB")))
-;        IEmptyableCollection (-empty [_] (throw (js/Error. "-empty is not supported on HistoricalDB")))
-;
-;        ILookup (-lookup ([_ _] (throw (js/Error. "-lookup is not supported on HistoricalDB")))
-;                         ([_ _ _] (throw (js/Error. "-lookup is not supported on HistoricalDB"))))
-;
-;        IAssociative (-contains-key? [_ _] (throw (js/Error. "-contains-key? is not supported on HistoricalDB")))
-;        (-assoc [_ _ _] (throw (js/Error. "-assoc is not supported on HistoricalDB")))]
-;       :clj
-;       [IPersistentCollection
-;        (count [db] (count (dbi/-datoms db :eavt [])))
-;        (equiv [db o] (equiv-db db o))
-;        (cons [db [k v]] (throw (UnsupportedOperationException. "cons is not supported on HistoricalDB")))
-;        (empty [db] (throw (UnsupportedOperationException. "empty is not supported on HistoricalDB")))
-;
-;        Seqable
-;        (seq [db] (dbi/-datoms db :eavt []))
-;
-;        Associative
-;        (assoc [db k v] (throw (UnsupportedOperationException. "assoc is not supported on HistoricalDB")))])
-;
-;   dbi/IDB
-;   (-schema [db] (dbi/-schema origin-db))
-;   (-rschema [db] (dbi/-rschema origin-db))
-;   (-system-entities [db] (dbi/-system-entities origin-db))
-;   (-attrs-by [db property] (dbi/-attrs-by origin-db property))
-;   (-temporal-index? [db] (dbi/-keep-history? origin-db))
-;   (-keep-history? [db] (dbi/-keep-history? origin-db))
-;   (-max-tx [db] (dbi/-max-tx origin-db))
-;   (-max-eid [db] (dbi/-max-eid origin-db))
-;   (-config [db] (dbi/-config origin-db))
-;   (-ref-for [db a-ident] (dbi/-ref-for origin-db a-ident))
-;   (-ident-for [db a-ref] (dbi/-ident-for origin-db a-ref))
-;
-;   dbi/IHistory
-;   (-time-point [db] nil)
-;   (-origin [db] origin-db)
-;
-;   dbi/ISearch
-;   (-search [db pattern]
-;            (dbs/temporal-search origin-db pattern))
-;
-;   dbi/IIndexAccess
-;   (-datoms [db index-type cs] (dbu/temporal-datoms origin-db index-type cs))
-;
-;   (-seek-datoms [db index-type cs] (dbs/temporal-seek-datoms origin-db index-type cs))
-;
-;   (-rseek-datoms [db index-type cs] (dbs/temporal-rseek-datoms origin-db index-type cs))
-;
-;   (-index-range [db attr start end] (dbs/temporal-index-range origin-db db attr start end)))
-;
-; ;; AsOfDB
-;
-; (defn- date? [d]
-;   #?(:cljs (instance? js/Date d)
-;      :clj (instance? Date d)))
-;
-; (defn get-current-values [db history-datoms]
-;   (->> history-datoms
-;        (group-by (fn [^Datom datom] [(.-e datom) (.-a datom)]))
-;        (mapcat
-;         (fn [[[_ a] datoms]]
-;           (if (dbu/multival? db a)
-;             (->> datoms
-;                  (sort-by datom-tx)
-;                  (reduce (fn [current-datoms ^Datom datom]
-;                            (if (datom-added datom)
-;                              (assoc current-datoms (.-v datom) datom)
-;                              (dissoc current-datoms (.-v datom))))
-;                          {})
-;                  vals)
-;             (let [last-ea-tx (apply max (map datom-tx datoms))
-;                   current-ea-datom (first (filter #(and (datom-added %) (= last-ea-tx (datom-tx %)))
-;                                                   datoms))]
-;               (if current-ea-datom
-;                 [current-ea-datom]
-;                 [])))))))
-;
-; (defn filter-as-of-datoms [datoms time-point db]
-;   (let [as-of-pred (fn [^Datom d]
-;                      (if (date? time-point)
-;                        (.before ^Date (.-v d) ^Date time-point)
-;                        (<= (dd/datom-tx d) time-point)))
-;
-;         filtered-tx-ids (dbu/filter-txInstant datoms as-of-pred db)
-;         filtered-datoms (->> datoms
-;                              (filter (fn [^Datom d] (contains? filtered-tx-ids (datom-tx d))))
-;                              (get-current-values db))]
-;     filtered-datoms))
-;
-; (defrecord-updatable AsOfDB [origin-db time-point]
-;   #?@(:cljs
-;       [IEquiv (-equiv [db other] (equiv-db db other))
-;        ISeqable (-seq [db] (dbi/-datoms db :eavt []))
-;        ICounted (-count [db] (count (dbi/-datoms db :eavt [])))
-;        IPrintWithWriter (-pr-writer [db w opts] (pr-db db w opts))
-;
-;        IEmptyableCollection (-empty [_] (throw (js/Error. "-empty is not supported on AsOfDB")))
-;        IEmptyableCollection (-empty [_] (throw (js/Error. "-empty is not supported on AsOfDB")))
-;
-;        ILookup (-lookup ([_ _] (throw (js/Error. "-lookup is not supported on AsOfDB")))
-;                         ([_ _ _] (throw (js/Error. "-lookup is not supported on AsOfDB"))))
-;
-;        IAssociative (-contains-key? [_ _] (throw (js/Error. "-contains-key? is not supported on AsOfDB")))
-;        (-assoc [_ _ _] (throw (js/Error. "-assoc is not supported on AsOfDB")))]
-;       :clj
-;       [IPersistentCollection
-;        (count [db] (count (dbi/-datoms db :eavt [])))
-;        (equiv [db o] (equiv-db db o))
-;        (cons [db [k v]] (throw (UnsupportedOperationException. "cons is not supported on AsOfDB")))
-;        (empty [db] (throw (UnsupportedOperationException. "empty is not supported on AsOfDB")))
-;
-;        Seqable
-;        (seq [db] (dbi/-datoms db :eavt []))
-;
-;        Associative
-;        (assoc [db k v] (throw (UnsupportedOperationException. "assoc is not supported on AsOfDB")))])
-;
-;   dbi/IDB
-;   (-schema [db] (dbi/-schema origin-db))
-;   (-rschema [db] (dbi/-rschema origin-db))
-;   (-system-entities [db] (dbi/-system-entities origin-db))
-;   (-attrs-by [db property] (dbi/-attrs-by origin-db property))
-;   (-temporal-index? [db] (dbi/-keep-history? origin-db))
-;   (-keep-history? [db] (dbi/-keep-history? origin-db))
-;   (-max-tx [db] (dbi/-max-tx origin-db))
-;   (-max-eid [db] (dbi/-max-eid origin-db))
-;   (-config [db] (dbi/-config origin-db))
-;   (-ref-for [db a-ident] (dbi/-ref-for origin-db a-ident))
-;   (-ident-for [db a-ref] (dbi/-ident-for origin-db a-ref))
-;
-;   dbi/IHistory
-;   (-time-point [db] time-point)
-;   (-origin [db] origin-db)
-;
-;   dbi/ISearch
-;   (-search [db pattern]
-;            (-> (dbs/temporal-search origin-db pattern)
-;                (filter-as-of-datoms time-point origin-db)))
-;
-;   dbi/IIndexAccess
-;   (-datoms [db index-type cs]
-;            (-> (dbu/temporal-datoms origin-db index-type cs)
-;                (filter-as-of-datoms time-point origin-db)))
-;
-;   (-seek-datoms [db index-type cs]
-;                 (-> (dbs/temporal-seek-datoms origin-db index-type cs)
-;                     (filter-as-of-datoms time-point origin-db)))
-;
-;   (-rseek-datoms [db index-type cs]
-;                  (-> (dbs/temporal-rseek-datoms origin-db index-type cs)
-;                      (filter-as-of-datoms time-point origin-db)))
-;
-;   (-index-range [db attr start end]
-;                 (-> (dbs/temporal-index-range origin-db db attr start end)
-;                     (filter-as-of-datoms time-point origin-db))))
-;
-; ;; SinceDB
-;
-; (defn- filter-since [datoms time-point db]
-;   (let [since-pred (fn [^Datom d]
-;                      (if (date? time-point)
-;                        (.after ^Date (.-v d) ^Date time-point)
-;                        (>= (.-tx d) time-point)))
-;         filtered-tx-ids (dbu/filter-txInstant datoms since-pred db)]
-;     (->> datoms
-;          (filter datom-added)
-;          (filter (fn [^Datom d] (contains? filtered-tx-ids (datom-tx d)))))))
-;
-; (defrecord-updatable SinceDB [origin-db time-point]
-;   #?@(:cljs
-;       [IEquiv (-equiv [db other] (equiv-db db other))
-;        ISeqable (-seq [db] (dbi/-datoms db :eavt []))
-;        ICounted (-count [db] (count (dbi/-datoms db :eavt [])))
-;        IPrintWithWriter (-pr-writer [db w opts] (pr-db db w opts))
-;
-;        IEmptyableCollection (-empty [_] (throw (js/Error. "-empty is not supported on SinceDB")))
-;        IEmptyableCollection (-empty [_] (throw (js/Error. "-empty is not supported on SinceDB")))
-;
-;        ILookup (-lookup ([_ _] (throw (js/Error. "-lookup is not supported on SinceDB")))
-;                         ([_ _ _] (throw (js/Error. "-lookup is not supported on SinceDB"))))
-;
-;        IAssociative (-contains-key? [_ _] (throw (js/Error. "-contains-key? is not supported on SinceDB")))
-;        (-assoc [_ _ _] (throw (js/Error. "-assoc is not supported on SinceDB")))]
-;       :clj
-;       [IPersistentCollection
-;        (count [db] (count (dbi/-datoms db :eavt [])))
-;        (equiv [db o] (equiv-db db o))
-;        (cons [db [k v]] (throw (UnsupportedOperationException. "cons is not supported on SinceDB")))
-;        (empty [db] (throw (UnsupportedOperationException. "empty is not supported on SinceDB")))
-;
-;        Seqable
-;        (seq [db] (dbi/-datoms db :eavt []))
-;
-;        Associative
-;        (assoc [db k v] (throw (UnsupportedOperationException. "assoc is not supported on SinceDB")))])
-;
-;   dbi/IDB
-;   (-schema [db] (dbi/-schema origin-db))
-;   (-rschema [db] (dbi/-rschema origin-db))
-;   (-system-entities [db] (dbi/-system-entities origin-db))
-;   (-attrs-by [db property] (dbi/-attrs-by origin-db property))
-;   (-temporal-index? [db] (dbi/-keep-history? db))
-;   (-keep-history? [db] (dbi/-keep-history? origin-db))
-;   (-max-tx [db] (dbi/-max-tx origin-db))
-;   (-max-eid [db] (dbi/-max-eid origin-db))
-;   (-config [db] (dbi/-config origin-db))
-;   (-ref-for [db a-ident] (dbi/-ref-for origin-db a-ident))
-;   (-ident-for [db a-ref] (dbi/-ident-for origin-db a-ref))
-;
-;   dbi/IHistory
-;   (-time-point [db] time-point)
-;   (-origin [db] origin-db)
-;
-;   dbi/ISearch
-;   (-search [db pattern]
-;            (-> (dbs/temporal-search origin-db pattern)
-;                (filter-since time-point origin-db)))
-;
-;   dbi/IIndexAccess
-;   (dbi/-datoms [db index-type cs]
-;                (-> (dbu/temporal-datoms origin-db index-type cs)
-;                    (filter-since time-point origin-db)))
-;
-;   (dbi/-seek-datoms [db index-type cs]
-;                     (-> (dbs/temporal-seek-datoms origin-db index-type cs)
-;                         (filter-since time-point origin-db)))
-;
-;   (dbi/-rseek-datoms [db index-type cs]
-;                      (-> (dbs/temporal-rseek-datoms origin-db index-type cs)
-;                          (filter-since time-point origin-db)))
-;
-;   (dbi/-index-range [db attr start end]
-;                     (-> (dbs/temporal-index-range origin-db db attr start end)
-;                         (filter-since time-point origin-db))))
-;
-; (defn- equiv-db-index [x y]
-;   (loop [xs (seq x)
-;          ys (seq y)]
-;     (cond
-;       (nil? xs) (nil? ys)
-;       (= (first xs) (first ys)) (recur (next xs) (next ys))
-;       :else false)))
-;
-; (defn- equiv-db [db other]
-;   (and (or (instance? DB other) (instance? FilteredDB other))
-;        (or (not (instance? DB other)) (= (hash db) (hash other)))
-;        (= (dbi/-schema db) (dbi/-schema other))
-;        (equiv-db-index (dbi/-datoms db :eavt []) (dbi/-datoms other :eavt []))))
-;
-; #?(:cljs
-;    (defn pr-db [db w opts]
-;      (-write w "#datahike/DB {")
-;      (-write w (str ":max-tx " (dbi/-max-tx db) " "))
-;      (-write w (str ":max-eid " (dbi/-max-eid db) " "))
-;      (-write w "}")))
-;
+;; FilteredDB
+
+(defrecord-updatable FilteredDB [unfiltered-db pred]
+  #?@(:clj
+      [IPersistentCollection
+       (count [db] (count (dbi/-datoms db :eavt [])))
+       (equiv [db o] (equiv-db db o))
+       (cons [db [k v]] (throw (UnsupportedOperationException. "cons is not supported on FilteredDB")))
+       (empty [db] (throw (UnsupportedOperationException. "empty is not supported on FilteredDB")))
+
+       Seqable (seq [db] (dbi/-datoms db :eavt []))
+
+       clojure.lang.ILookup (valAt [db k] (throw (UnsupportedOperationException. "valAt/2 is not supported on FilteredDB")))
+       (valAt [db k nf] (throw (UnsupportedOperationException. "valAt/3 is not supported on FilteredDB")))
+       clojure.lang.IKeywordLookup (getLookupThunk [db k]
+                                                   (throw (UnsupportedOperationException. "getLookupThunk is not supported on FilteredDB")))
+
+       Associative
+       (containsKey [e k] (throw (UnsupportedOperationException. "containsKey is not supported on FilteredDB")))
+       (entryAt [db k] (throw (UnsupportedOperationException. "entryAt is not supported on FilteredDB")))
+       (assoc [db k v] (throw (UnsupportedOperationException. "assoc is not supported on FilteredDB")))])
+
+  dbi/IDB
+  (-schema [db] (dbi/-schema unfiltered-db))
+  (-rschema [db] (dbi/-rschema unfiltered-db))
+  (-system-entities [db] (dbi/-system-entities unfiltered-db))
+  (-attrs-by [db property] (dbi/-attrs-by unfiltered-db property))
+  (-temporal-index? [db] (dbi/-keep-history? db))
+  (-keep-history? [db] (dbi/-keep-history? unfiltered-db))
+  (-max-tx [db] (dbi/-max-tx unfiltered-db))
+  (-max-eid [db] (dbi/-max-eid unfiltered-db))
+  (-config [db] (dbi/-config unfiltered-db))
+  (-ref-for [db a-ident] (dbi/-ref-for unfiltered-db a-ident))
+  (-ident-for [db a-ref] (dbi/-ident-for unfiltered-db a-ref))
+
+  dbi/ISearch
+  (-search [db pattern]
+           (filter (.-pred db) (dbi/-search unfiltered-db pattern)))
+
+  dbi/IIndexAccess
+  (-datoms [db index cs]
+           (filter (.-pred db) (dbi/-datoms unfiltered-db index cs)))
+
+  (-seek-datoms [db index cs]
+                (filter (.-pred db) (dbi/-seek-datoms unfiltered-db index cs)))
+
+  (-rseek-datoms [db index cs]
+                 (filter (.-pred db) (dbi/-rseek-datoms unfiltered-db index cs)))
+
+  (-index-range [db attr start end]
+                (filter (.-pred db) (dbi/-index-range unfiltered-db attr start end))))
+
+#?(:cljs
+   ;; workaround for multiple implementations warnings
+   (extend-type FilteredDB
+      IEquiv (-equiv [db other] (equiv-db db other))
+      ISeqable (-seq [db] (dbi/-datoms db :eavt []))
+      ICounted (-count [db] (count (dbi/-datoms db :eavt [])))
+      IPrintWithWriter (-pr-writer [db w opts] (pr-db db w opts))
+      IEmptyableCollection (-empty [_] (throw (js/Error. "-empty is not supported on FilteredDB")))
+      ILookup (-lookup ([_ _] (throw (js/Error. "-lookup is not supported on FilteredDB")))
+                       ([_ _ _] (throw (js/Error. "-lookup is not supported on FilteredDB"))))
+      IAssociative (-contains-key? [_ _] (throw (js/Error. "-contains-key? is not supported on FilteredDB")))
+     (-assoc [_ _ _] (throw (js/Error. "-assoc is not supported on FilteredDB")))))
+
+;; HistoricalDB
+
+(defrecord-updatable HistoricalDB [origin-db]
+  #?@(:clj
+      [IPersistentCollection
+       (count [db] (count (dbi/-datoms db :eavt [])))
+       (equiv [db o] (equiv-db db o))
+       (cons [db [k v]] (throw (UnsupportedOperationException. "cons is not supported on HistoricalDB")))
+       (empty [db] (throw (UnsupportedOperationException. "empty is not supported on HistoricalDB")))
+
+       Seqable
+       (seq [db] (dbi/-datoms db :eavt []))
+
+       Associative
+       (assoc [db k v] (throw (UnsupportedOperationException. "assoc is not supported on HistoricalDB")))])
+
+  dbi/IDB
+  (-schema [db] (dbi/-schema origin-db))
+  (-rschema [db] (dbi/-rschema origin-db))
+  (-system-entities [db] (dbi/-system-entities origin-db))
+  (-attrs-by [db property] (dbi/-attrs-by origin-db property))
+  (-temporal-index? [db] (dbi/-keep-history? origin-db))
+  (-keep-history? [db] (dbi/-keep-history? origin-db))
+  (-max-tx [db] (dbi/-max-tx origin-db))
+  (-max-eid [db] (dbi/-max-eid origin-db))
+  (-config [db] (dbi/-config origin-db))
+  (-ref-for [db a-ident] (dbi/-ref-for origin-db a-ident))
+  (-ident-for [db a-ref] (dbi/-ident-for origin-db a-ref))
+
+  dbi/IHistory
+  (-time-point [db] nil)
+  (-origin [db] origin-db)
+
+  dbi/ISearch
+  (-search [db pattern]
+           (dbs/temporal-search origin-db pattern))
+
+  dbi/IIndexAccess
+  (-datoms [db index-type cs] (dbu/temporal-datoms origin-db index-type cs))
+
+  (-seek-datoms [db index-type cs] (dbs/temporal-seek-datoms origin-db index-type cs))
+
+  (-rseek-datoms [db index-type cs] (dbs/temporal-rseek-datoms origin-db index-type cs))
+
+  (-index-range [db attr start end] (dbs/temporal-index-range origin-db db attr start end)))
+
+#?(:cljs
+ (extend-type HistoricalDB
+   IEquiv (-equiv [db other] (equiv-db db other))
+   ISeqable (-seq [db] (dbi/-datoms db :eavt []))
+   ICounted (-count [db] (count (dbi/-datoms db :eavt [])))
+   IPrintWithWriter (-pr-writer [db w opts] (pr-db db w opts))
+   IEmptyableCollection (-empty [_] (throw (js/Error. "-empty is not supported on HistoricalDB")))
+   ILookup (-lookup ([_ _] (throw (js/Error. "-lookup is not supported on HistoricalDB")))
+                    ([_ _ _] (throw (js/Error. "-lookup is not supported on HistoricalDB"))))
+   IAssociative
+   (-contains-key? [_ _] (throw (js/Error. "-contains-key? is not supported on HistoricalDB")))
+   (-assoc [_ _ _] (throw (js/Error. "-assoc is not supported on HistoricalDB")))))
+
+
+;; AsOfDB
+
+(defn- date? [d]
+  #?(:cljs (instance? js/Date d)
+     :clj (instance? Date d)))
+
+(defn get-current-values [db history-datoms]
+  (->> history-datoms
+       (group-by (fn [^Datom datom] [(.-e datom) (.-a datom)]))
+       (mapcat
+        (fn [[[_ a] datoms]]
+          (if (dbu/multival? db a)
+            (->> datoms
+                 (sort-by datom-tx)
+                 (reduce (fn [current-datoms ^Datom datom]
+                           (if (datom-added datom)
+                             (assoc current-datoms (.-v datom) datom)
+                             (dissoc current-datoms (.-v datom))))
+                         {})
+                 vals)
+            (let [last-ea-tx (apply max (map datom-tx datoms))
+                  current-ea-datom (first (filter #(and (datom-added %) (= last-ea-tx (datom-tx %)))
+                                                  datoms))]
+              (if current-ea-datom
+                [current-ea-datom]
+                [])))))))
+
+(defn filter-as-of-datoms [datoms time-point db]
+  (let [as-of-pred (fn [^Datom d]
+                     (if (date? time-point)
+                       (.before ^Date (.-v d) ^Date time-point)
+                       (<= (dd/datom-tx d) time-point)))
+
+        filtered-tx-ids (dbu/filter-txInstant datoms as-of-pred db)
+        filtered-datoms (->> datoms
+                             (filter (fn [^Datom d] (contains? filtered-tx-ids (datom-tx d))))
+                             (get-current-values db))]
+    filtered-datoms))
+
+(defrecord-updatable AsOfDB [origin-db time-point]
+  #?@(:clj
+      [IPersistentCollection
+       (count [db] (count (dbi/-datoms db :eavt [])))
+       (equiv [db o] (equiv-db db o))
+       (cons [db [k v]] (throw (UnsupportedOperationException. "cons is not supported on AsOfDB")))
+       (empty [db] (throw (UnsupportedOperationException. "empty is not supported on AsOfDB")))
+
+       Seqable
+       (seq [db] (dbi/-datoms db :eavt []))
+
+       Associative
+       (assoc [db k v] (throw (UnsupportedOperationException. "assoc is not supported on AsOfDB")))])
+
+  dbi/IDB
+  (-schema [db] (dbi/-schema origin-db))
+  (-rschema [db] (dbi/-rschema origin-db))
+  (-system-entities [db] (dbi/-system-entities origin-db))
+  (-attrs-by [db property] (dbi/-attrs-by origin-db property))
+  (-temporal-index? [db] (dbi/-keep-history? origin-db))
+  (-keep-history? [db] (dbi/-keep-history? origin-db))
+  (-max-tx [db] (dbi/-max-tx origin-db))
+  (-max-eid [db] (dbi/-max-eid origin-db))
+  (-config [db] (dbi/-config origin-db))
+  (-ref-for [db a-ident] (dbi/-ref-for origin-db a-ident))
+  (-ident-for [db a-ref] (dbi/-ident-for origin-db a-ref))
+
+  dbi/IHistory
+  (-time-point [db] time-point)
+  (-origin [db] origin-db)
+
+  dbi/ISearch
+  (-search [db pattern]
+           (-> (dbs/temporal-search origin-db pattern)
+               (filter-as-of-datoms time-point origin-db)))
+
+  dbi/IIndexAccess
+  (-datoms [db index-type cs]
+           (-> (dbu/temporal-datoms origin-db index-type cs)
+               (filter-as-of-datoms time-point origin-db)))
+
+  (-seek-datoms [db index-type cs]
+                (-> (dbs/temporal-seek-datoms origin-db index-type cs)
+                    (filter-as-of-datoms time-point origin-db)))
+
+  (-rseek-datoms [db index-type cs]
+                 (-> (dbs/temporal-rseek-datoms origin-db index-type cs)
+                     (filter-as-of-datoms time-point origin-db)))
+
+  (-index-range [db attr start end]
+                (-> (dbs/temporal-index-range origin-db db attr start end)
+                    (filter-as-of-datoms time-point origin-db))))
+
+#?(:cljs
+   (extend-type AsOfDB
+     IEquiv (-equiv [db other] (equiv-db db other))
+     ISeqable (-seq [db] (dbi/-datoms db :eavt []))
+     ICounted (-count [db] (count (dbi/-datoms db :eavt [])))
+     IPrintWithWriter (-pr-writer [db w opts] (pr-db db w opts))
+     IEmptyableCollection (-empty [_] (throw (js/Error. "-empty is not supported on AsOfDB")))
+     ILookup (-lookup ([_ _] (throw (js/Error. "-lookup is not supported on AsOfDB")))
+                      ([_ _ _] (throw (js/Error. "-lookup is not supported on AsOfDB"))))
+     IAssociative
+     (-contains-key? [_ _] (throw (js/Error. "-contains-key? is not supported on AsOfDB")))
+     (-assoc [_ _ _] (throw (js/Error. "-assoc is not supported on AsOfDB")))))
+
+;; SinceDB
+
+(defn- filter-since [datoms time-point db]
+  (let [since-pred (fn [^Datom d]
+                     (if (date? time-point)
+                       (.after ^Date (.-v d) ^Date time-point)
+                       (>= (.-tx d) time-point)))
+        filtered-tx-ids (dbu/filter-txInstant datoms since-pred db)]
+    (->> datoms
+         (filter datom-added)
+         (filter (fn [^Datom d] (contains? filtered-tx-ids (datom-tx d)))))))
+
+(defrecord-updatable SinceDB [origin-db time-point]
+  #?@(:clj
+      [IPersistentCollection
+       (count [db] (count (dbi/-datoms db :eavt [])))
+       (equiv [db o] (equiv-db db o))
+       (cons [db [k v]] (throw (UnsupportedOperationException. "cons is not supported on SinceDB")))
+       (empty [db] (throw (UnsupportedOperationException. "empty is not supported on SinceDB")))
+
+       Seqable
+       (seq [db] (dbi/-datoms db :eavt []))
+
+       Associative
+       (assoc [db k v] (throw (UnsupportedOperationException. "assoc is not supported on SinceDB")))])
+
+  dbi/IDB
+  (-schema [db] (dbi/-schema origin-db))
+  (-rschema [db] (dbi/-rschema origin-db))
+  (-system-entities [db] (dbi/-system-entities origin-db))
+  (-attrs-by [db property] (dbi/-attrs-by origin-db property))
+  (-temporal-index? [db] (dbi/-keep-history? db))
+  (-keep-history? [db] (dbi/-keep-history? origin-db))
+  (-max-tx [db] (dbi/-max-tx origin-db))
+  (-max-eid [db] (dbi/-max-eid origin-db))
+  (-config [db] (dbi/-config origin-db))
+  (-ref-for [db a-ident] (dbi/-ref-for origin-db a-ident))
+  (-ident-for [db a-ref] (dbi/-ident-for origin-db a-ref))
+
+  dbi/IHistory
+  (-time-point [db] time-point)
+  (-origin [db] origin-db)
+
+  dbi/ISearch
+  (-search [db pattern]
+           (-> (dbs/temporal-search origin-db pattern)
+               (filter-since time-point origin-db)))
+
+  dbi/IIndexAccess
+  (dbi/-datoms [db index-type cs]
+               (-> (dbu/temporal-datoms origin-db index-type cs)
+                   (filter-since time-point origin-db)))
+
+  (dbi/-seek-datoms [db index-type cs]
+                    (-> (dbs/temporal-seek-datoms origin-db index-type cs)
+                        (filter-since time-point origin-db)))
+
+  (dbi/-rseek-datoms [db index-type cs]
+                     (-> (dbs/temporal-rseek-datoms origin-db index-type cs)
+                         (filter-since time-point origin-db)))
+
+  (dbi/-index-range [db attr start end]
+                    (-> (dbs/temporal-index-range origin-db db attr start end)
+                        (filter-since time-point origin-db))))
+
+#?(:cljs
+   (extend-type SinceDB
+     IEquiv (-equiv [db other] (equiv-db db other))
+     ISeqable (-seq [db] (dbi/-datoms db :eavt []))
+     ICounted (-count [db] (count (dbi/-datoms db :eavt [])))
+     IPrintWithWriter (-pr-writer [db w opts] (pr-db db w opts))
+     IEmptyableCollection (-empty [_] (throw (js/Error. "-empty is not supported on SinceDB")))
+     ILookup
+     (-lookup ([_ _] (throw (js/Error. "-lookup is not supported on SinceDB")))
+              ([_ _ _] (throw (js/Error. "-lookup is not supported on SinceDB"))))
+     IAssociative
+     (-contains-key? [_ _] (throw (js/Error. "-contains-key? is not supported on SinceDB")))
+     (-assoc [_ _ _] (throw (js/Error. "-assoc is not supported on SinceDB")))))
+
+(defn- equiv-db-index [x y]
+  (loop [xs (seq x)
+         ys (seq y)]
+    (cond
+      (nil? xs) (nil? ys)
+      (= (first xs) (first ys)) (recur (next xs) (next ys))
+      :else false)))
+
+(defn- equiv-db [db other]
+  (and (or (instance? DB other) (instance? FilteredDB other))
+       (or (not (instance? DB other)) (= (hash db) (hash other)))
+       (= (dbi/-schema db) (dbi/-schema other))
+       (equiv-db-index (dbi/-datoms db :eavt []) (dbi/-datoms other :eavt []))))
+
+#?(:cljs
+   (defn pr-db [db w opts]
+     (-write w "#datahike/DB {")
+     (-write w (str ":max-tx " (dbi/-max-tx db) " "))
+     (-write w (str ":max-eid " (dbi/-max-eid db) " "))
+     (-write w "}")))
+
 ; #?(:clj
 ;    (do
 ;      (defn pr-db [db, ^Writer w]
