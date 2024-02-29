@@ -566,299 +566,296 @@
      (-write w (str ":max-eid " (dbi/-max-eid db) " "))
      (-write w "}")))
 
-; #?(:clj
-;    (do
-;      (defn pr-db [db, ^Writer w]
-;        (.write w (str "#datahike/DB {"))
-;        (.write w (str ":store-id ["
-;                       (store/store-identity (:store (dbi/-config db)))
-;                       " " (:branch (dbi/-config db))  "] "))
-;        (.write w (str ":commit-id " (pr-str (:datahike/commit-id (:meta db))) " "))
-;        (.write w (str ":max-tx " (dbi/-max-tx db) " "))
-;        (.write w (str ":max-eid " (dbi/-max-eid db)))
-;        (.write w "}"))
-;
-;      (defn pr-hist-db [db ^Writer w flavor time-point?]
-;        (.write w (str "#datahike/" flavor " {"))
-;        (.write w ":origin ")
-;        (binding [*out* w]
-;          (pr (dbi/-origin db)))
-;        (when time-point?
-;          (.write w " :time-point ")
-;          (binding [*out* w]
-;            (pr (dbi/-time-point db))))
-;        (.write w "}"))
-;
-;      (defmethod print-method DB [db w] (pr-db db w))
-;      (defmethod print-method FilteredDB [db w] (pr-db db w)) ;; why not with "FilteredDB" ?
-;      (defmethod print-method HistoricalDB [db w] (pr-hist-db db w "HistoricalDB" false))
-;      (defmethod print-method AsOfDB [db w] (pr-hist-db db w "AsOfDB" true))
-;      (defmethod print-method SinceDB [db w] (pr-hist-db db w "SinceDB" true))
-;
-;      (defmethod pp/simple-dispatch Datom [^Datom d]
-;        (pp/pprint-logical-block :prefix "#datahike/Datom [" :suffix "]"
-;                                 (pp/write-out (.-e d))
-;                                 (.write ^Writer *out* " ")
-;                                 (pp/pprint-newline :linear)
-;                                 (pp/write-out (.-a d))
-;                                 (.write ^Writer *out* " ")
-;                                 (pp/pprint-newline :linear)
-;                                 (pp/write-out (.-v d))
-;                                 (.write ^Writer *out* " ")
-;                                 (pp/pprint-newline :linear)
-;                                 (pp/write-out (datom-tx d))))
-;
-;      (defn- pp-db [db ^Writer w]
-;        (pp/pprint-logical-block :prefix "#datahike/DB {" :suffix "}"
-;                                 (pp/pprint-logical-block
-;                                  (pp/write-out :max-tx)
-;                                  (.write ^Writer *out* " ")
-;                                  (pp/pprint-newline :linear)
-;                                  (pp/write-out (dbi/-max-tx db))
-;                                  (.write ^Writer *out* " ")
-;                                  (pp/pprint-newline :linear)
-;                                  (pp/write-out :max-eid)
-;                                  (.write ^Writer *out* " ")
-;                                  (pp/pprint-newline :linear)
-;                                  (pp/write-out (dbi/-max-eid db)))
-;                                 (pp/pprint-newline :linear)))
-;
-;      (defmethod pp/simple-dispatch DB [db] (pp-db db *out*))
-;      (defmethod pp/simple-dispatch FilteredDB [db] (pp-db db *out*))))
-;
-; (defn- validate-schema-key [a k v expected]
-;   (when-not (or (nil? v)
-;                 (contains? expected v))
-;     (throw (ex-info (str "Bad attribute specification for " (pr-str {a {k v}}) ", expected one of " expected)
-;                     {:error :schema/validation
-;                      :attribute a
-;                      :key k
-;                      :value v}))))
-;
-; (defn- validate-tuple-schema [a kv]
-;   (when (= :db.type/tuple (:db/valueType kv))
-;     (case (some #{:db/tupleAttrs :db/tupleTypes :db/tupleType} (keys kv))
-;       :db/tupleAttrs (when (not (vector? (:db/tupleAttrs kv)))
-;                        (throw (ex-info (str "Bad attribute specification for " a ": {:db/tupleAttrs ...} should be a vector}")
-;                                        {:error     :schema/validation
-;                                         :attribute a
-;                                         :key       :db/tupleAttrs})))
-;       :db/tupleTypes (when (not (vector? (:db/tupleTypes kv)))
-;                        (throw (ex-info (str "Bad attribute specification for " a ": {:db/tupleTypes ...} should be a vector}")
-;                                        {:error     :schema/validation
-;                                         :attribute a
-;                                         :key       :db/tupleTypes})))
-;       :db/tupleType  (when (not (keyword? (:db/tupleType kv)))
-;                        (throw (ex-info (str "Bad attribute specification for " a ": {:db/tupleType ...} should be a keyword}")
-;                                        {:error     :schema/validation
-;                                         :attribute a
-;                                         :key       :db/tupleType}))))))
-;
-; (defn- validate-schema [schema]
-;   (doseq [[a-ident kv] schema]
-;     (let [comp? (:db/isComponent kv false)]
-;       (validate-schema-key a-ident :db/isComponent (:db/isComponent kv) #{true false})
-;       (when (and comp? (not= (:db/valueType kv) :db.type/ref))
-;         (throw (ex-info (str "Bad attribute specification for " a-ident ": {:db/isComponent true} should also have {:db/valueType :db.type/ref}")
-;                         {:error :schema/validation
-;                          :attribute a-ident
-;                          :key :db/isComponent}))))
-;     (validate-schema-key a-ident :db/unique (:db/unique kv) #{:db.unique/value :db.unique/identity})
-;     (validate-schema-key a-ident :db/valueType (:db/valueType kv) #{:db.type/ref :db.type/tuple})
-;     (validate-schema-key a-ident :db/cardinality (:db/cardinality kv) #{:db.cardinality/one :db.cardinality/many})
-;     (validate-tuple-schema a-ident kv)))
-;
-; (defn to-old-schema [new-schema]
-;   (if (or (vector? new-schema) (seq? new-schema))
-;     (reduce
-;      (fn [acc {:keys [:db/ident] :as schema-entity}]
-;        (assoc acc ident schema-entity))
-;      {}
-;      new-schema)
-;     new-schema))
-;
-; (defn- validate-write-schema [schema]
-;   (when-not (ds/old-schema-valid? schema)
-;     (raise "Incomplete schema attributes, expected at least :db/valueType, :db/cardinality"
-;            (ds/explain-old-schema schema))))
-;
-; (defn init-max-eid [eavt]
-;   ;; solved with reverse slice first in datascript
-;   (if-let [datoms (di/-slice
-;                    eavt
-;                    (datom e0 nil nil tx0)
-;                    (datom (dec tx0) nil nil txmax)
-;                    :eavt)]
-;     (-> datoms vec rseq first :e)                           ;; :e of last datom in slice
-;     e0))
-;
-; (defn get-max-tx [eavt]
-;   (transduce (map (fn [^Datom d] (datom-tx d))) max tx0 (di/-all eavt)))
-;
-; (def ref-datoms                                             ;; maps enums as well
-;   (let [idents (reduce (fn [m {:keys [db/ident db/id]}]
-;                          (assoc m ident id))
-;                        {}
-;                        system-schema)]
-;     (->> system-schema
-;          (mapcat
-;           (fn [{:keys [db/id] :as i}]
-;             (reduce-kv
-;              (fn [coll k v]
-;                (let [v-ref (idents v)
-;                        ;; datom val can be system schema eid (v-ref), or ident or regular (v)
-;                      d-val (if (and (not= k :db/ident) v-ref) v-ref v)]
-;                  (conj coll (dd/datom id (idents k) d-val tx0))))
-;              []
-;              (dissoc i :db/id))))
-;          vec)))
-;
-; (defn get-ident-ref-map
-;   "Maps IDs of system entities to their names (keyword) and attribute names to the attribute's specification"
-;   [schema]
-;   (reduce
-;    (fn [m [a {:keys [db/id]}]]
-;      (when a
-;        (assoc m a id)))
-;    {}
-;    schema))
-;
-; (defn ^DB empty-db
-;   "Prefer create-database in api, schema only in index for attribute reference database."
-;   ([] (empty-db nil nil nil))
-;   ([schema] (empty-db schema nil nil))
-;   ([schema user-config] (empty-db schema user-config nil))
-;   ([schema user-config store]
-;    {:pre [(or (nil? schema) (map? schema) (coll? schema))]}
-;    (let [complete-config (merge (dc/storeless-config) user-config)
-;          _ (dc/validate-config complete-config)
-;          complete-config (dc/remove-nils complete-config)
-;          {:keys [keep-history? index schema-flexibility attribute-refs?]} complete-config
-;          on-read? (= :read schema-flexibility)
-;          schema (to-old-schema schema)
-;          _ (if on-read?
-;              (validate-schema schema)
-;              (validate-write-schema schema))
-;          complete-schema (merge schema
-;                                 (if attribute-refs?
-;                                   c/ref-implicit-schema
-;                                   c/non-ref-implicit-schema))
-;          rschema (dbu/rschema complete-schema)
-;          ident-ref-map (if attribute-refs? (get-ident-ref-map complete-schema) {})
-;          ref-ident-map (if attribute-refs? (clojure.set/map-invert ident-ref-map) {})
-;          system-entities (if attribute-refs? c/system-entities #{})
-;          indexed (if attribute-refs?
-;                    (set (map ident-ref-map (:db/index rschema)))
-;                    (:db/index rschema))
-;          index-config (merge (:index-config complete-config)
-;                              {:indexed indexed})
-;          eavt (if attribute-refs?
-;                 (di/init-index index store ref-datoms :eavt 0 index-config)
-;                 (di/empty-index index store :eavt index-config))
-;          aevt (if attribute-refs?
-;                 (di/init-index index store ref-datoms :aevt 0 index-config)
-;                 (di/empty-index index store :aevt index-config))
-;          indexed-datoms (filter (fn [[_ a _ _]] (contains? indexed a)) ref-datoms)
-;          avet (if attribute-refs?
-;                 (di/init-index index store indexed-datoms :avet 0 index-config)
-;                 (di/empty-index index store :avet index-config))
-;          max-eid (if attribute-refs? ue0 e0)
-;          max-tx (if attribute-refs? utx0 tx0)]
-;      (map->DB
-;       (merge
-;        {:schema complete-schema
-;         :rschema rschema
-;         :config complete-config
-;         :eavt eavt
-;         :aevt aevt
-;         :avet avet
-;         :max-eid max-eid
-;         :max-tx max-tx
-;         :hash 0
-;         :system-entities system-entities
-;         :ref-ident-map ref-ident-map
-;         :ident-ref-map ident-ref-map
-;         :meta (tools/meta-data)
-;         :op-count (if attribute-refs? (count ref-datoms) 0)}
-;        (when keep-history?                                  ;; no difference for attribute references since no update possible
-;          {:temporal-eavt eavt
-;           :temporal-aevt aevt
-;           :temporal-avet avet}))))))
-;
-; (defn get-max-tx [eavt]
-;   (transduce (map (fn [^Datom d] (datom-tx d))) max tx0 (di/-all eavt)))
-;
-; (defn ^DB init-db
-;   ([datoms] (init-db datoms nil nil nil))
-;   ([datoms schema] (init-db datoms schema nil nil))
-;   ([datoms schema user-config] (init-db datoms schema user-config nil))
-;   ([datoms schema user-config store]
-;    (validate-schema schema)
-;    (let [{:keys [index keep-history? attribute-refs?] :as complete-config}  (merge (dc/storeless-config) user-config)
-;          _ (dc/validate-config complete-config)
-;          complete-schema (merge schema
-;                                 (if attribute-refs?
-;                                   c/ref-implicit-schema
-;                                   c/non-ref-implicit-schema))
-;          rschema (dbu/rschema complete-schema)
-;          ident-ref-map (if attribute-refs? (get-ident-ref-map schema) {})
-;          ref-ident-map (if attribute-refs? (clojure.set/map-invert ident-ref-map) {})
-;          system-entities (if attribute-refs? c/system-entities #{})
-;
-;          indexed (if attribute-refs?
-;                    (set (map ident-ref-map (:db/index rschema)))
-;                    (:db/index rschema))
-;          new-datoms (if attribute-refs? (concat ref-datoms datoms) datoms)
-;          indexed-datoms (filter (fn [[_ a _ _]] (contains? indexed a)) new-datoms)
-;          op-count 0
-;          index-config (assoc (:index-config complete-config)
-;                              :indexed indexed)
-;          avet (di/init-index index store indexed-datoms :avet op-count index-config)
-;          eavt (di/init-index index store new-datoms :eavt op-count index-config)
-;          aevt (di/init-index index store new-datoms :aevt op-count index-config)
-;          max-eid (init-max-eid eavt)
-;          max-tx (get-max-tx eavt)
-;          op-count (count new-datoms)]
-;      (map->DB (merge {:schema complete-schema
-;                       :rschema rschema
-;                       :config complete-config
-;                       :eavt eavt
-;                       :aevt aevt
-;                       :avet avet
-;                       :max-eid max-eid
-;                       :max-tx max-tx
-;                       :op-count op-count
-;                       :hash (reduce #(+ %1 (hash %2)) 0 datoms)
-;                       :system-entities system-entities
-;                       :meta (tools/meta-data)
-;                       :ref-ident-map ref-ident-map
-;                       :ident-ref-map ident-ref-map}
-;                      (when keep-history?
-;                        {:temporal-eavt (di/empty-index index store :eavt index-config)
-;                         :temporal-aevt (di/empty-index index store :aevt index-config)
-;                         :temporal-avet (di/empty-index index store :avet index-config)}))))))
-;
-; (defn metrics [^DB db]
-;   (let [update-count-in (fn [m ks] (update-in m ks #(if % (inc %) 1)))
-;         counts-map (->> (di/-seq (.-eavt db))
-;                         (reduce (fn [m ^Datom datom]
-;                                   (-> m
-;                                       (update-count-in [:per-attr-counts (dbi/-ident-for db (.-a datom))])
-;                                       (update-count-in [:per-entity-counts (.-e datom)])))
-;                                 {:per-attr-counts    {}
-;                                  :per-entity-counts  {}}))
-;         sum-indexed-attr-counts (fn [attr-counts] (->> attr-counts
-;                                                        (m/filter-keys #(contains? (:db/index (.-rschema db)) %))
-;                                                        vals
-;                                                        (reduce + 0)))]
-;     (cond-> (merge counts-map
-;                    {:count (di/-count (.-eavt db))
-;                     :avet-count (->> (:per-attr-counts counts-map)
-;                                      sum-indexed-attr-counts)})
-;       (dbi/-keep-history? db)
-;       (merge {:temporal-count (di/-count (.-temporal-eavt db))
-;               :temporal-avet-count (->> (di/-seq (.-temporal-eavt db))
-;                                         (reduce (fn [m ^Datom datom] (update-count-in m [(dbi/-ident-for db (.-a datom))]))
-;                                                 {})
-;                                         sum-indexed-attr-counts)}))))
-;
+#?(:clj
+   (do
+     (defn pr-db [db, ^Writer w]
+       (.write w (str "#datahike/DB {"))
+       (.write w (str ":store-id ["
+                      (store/store-identity (:store (dbi/-config db)))
+                      " " (:branch (dbi/-config db))  "] "))
+       (.write w (str ":commit-id " (pr-str (:datahike/commit-id (:meta db))) " "))
+       (.write w (str ":max-tx " (dbi/-max-tx db) " "))
+       (.write w (str ":max-eid " (dbi/-max-eid db)))
+       (.write w "}"))
+
+     (defn pr-hist-db [db ^Writer w flavor time-point?]
+       (.write w (str "#datahike/" flavor " {"))
+       (.write w ":origin ")
+       (binding [*out* w]
+         (pr (dbi/-origin db)))
+       (when time-point?
+         (.write w " :time-point ")
+         (binding [*out* w]
+           (pr (dbi/-time-point db))))
+       (.write w "}"))
+
+     (defmethod print-method DB [db w] (pr-db db w))
+     (defmethod print-method FilteredDB [db w] (pr-db db w)) ;; why not with "FilteredDB" ?
+     (defmethod print-method HistoricalDB [db w] (pr-hist-db db w "HistoricalDB" false))
+     (defmethod print-method AsOfDB [db w] (pr-hist-db db w "AsOfDB" true))
+     (defmethod print-method SinceDB [db w] (pr-hist-db db w "SinceDB" true))
+
+     (defmethod pp/simple-dispatch Datom [^Datom d]
+       (pp/pprint-logical-block :prefix "#datahike/Datom [" :suffix "]"
+                                (pp/write-out (.-e d))
+                                (.write ^Writer *out* " ")
+                                (pp/pprint-newline :linear)
+                                (pp/write-out (.-a d))
+                                (.write ^Writer *out* " ")
+                                (pp/pprint-newline :linear)
+                                (pp/write-out (.-v d))
+                                (.write ^Writer *out* " ")
+                                (pp/pprint-newline :linear)
+                                (pp/write-out (datom-tx d))))
+
+     (defn- pp-db [db ^Writer w]
+       (pp/pprint-logical-block :prefix "#datahike/DB {" :suffix "}"
+                                (pp/pprint-logical-block
+                                 (pp/write-out :max-tx)
+                                 (.write ^Writer *out* " ")
+                                 (pp/pprint-newline :linear)
+                                 (pp/write-out (dbi/-max-tx db))
+                                 (.write ^Writer *out* " ")
+                                 (pp/pprint-newline :linear)
+                                 (pp/write-out :max-eid)
+                                 (.write ^Writer *out* " ")
+                                 (pp/pprint-newline :linear)
+                                 (pp/write-out (dbi/-max-eid db)))
+                                (pp/pprint-newline :linear)))
+
+     (defmethod pp/simple-dispatch DB [db] (pp-db db *out*))
+     (defmethod pp/simple-dispatch FilteredDB [db] (pp-db db *out*))))
+
+(defn- validate-schema-key [a k v expected]
+  (when-not (or (nil? v)
+                (contains? expected v))
+    (throw (ex-info (str "Bad attribute specification for " (pr-str {a {k v}}) ", expected one of " expected)
+                    {:error :schema/validation
+                     :attribute a
+                     :key k
+                     :value v}))))
+
+(defn- validate-tuple-schema [a kv]
+  (when (= :db.type/tuple (:db/valueType kv))
+    (case (some #{:db/tupleAttrs :db/tupleTypes :db/tupleType} (keys kv))
+      :db/tupleAttrs (when (not (vector? (:db/tupleAttrs kv)))
+                       (throw (ex-info (str "Bad attribute specification for " a ": {:db/tupleAttrs ...} should be a vector}")
+                                       {:error     :schema/validation
+                                        :attribute a
+                                        :key       :db/tupleAttrs})))
+      :db/tupleTypes (when (not (vector? (:db/tupleTypes kv)))
+                       (throw (ex-info (str "Bad attribute specification for " a ": {:db/tupleTypes ...} should be a vector}")
+                                       {:error     :schema/validation
+                                        :attribute a
+                                        :key       :db/tupleTypes})))
+      :db/tupleType  (when (not (keyword? (:db/tupleType kv)))
+                       (throw (ex-info (str "Bad attribute specification for " a ": {:db/tupleType ...} should be a keyword}")
+                                       {:error     :schema/validation
+                                        :attribute a
+                                        :key       :db/tupleType}))))))
+
+(defn- validate-schema [schema]
+  (doseq [[a-ident kv] schema]
+    (let [comp? (:db/isComponent kv false)]
+      (validate-schema-key a-ident :db/isComponent (:db/isComponent kv) #{true false})
+      (when (and comp? (not= (:db/valueType kv) :db.type/ref))
+        (throw (ex-info (str "Bad attribute specification for " a-ident ": {:db/isComponent true} should also have {:db/valueType :db.type/ref}")
+                        {:error :schema/validation
+                         :attribute a-ident
+                         :key :db/isComponent}))))
+    (validate-schema-key a-ident :db/unique (:db/unique kv) #{:db.unique/value :db.unique/identity})
+    (validate-schema-key a-ident :db/valueType (:db/valueType kv) #{:db.type/ref :db.type/tuple})
+    (validate-schema-key a-ident :db/cardinality (:db/cardinality kv) #{:db.cardinality/one :db.cardinality/many})
+    (validate-tuple-schema a-ident kv)))
+
+(defn to-old-schema [new-schema]
+  (if (or (vector? new-schema) (seq? new-schema))
+    (reduce
+     (fn [acc {:keys [:db/ident] :as schema-entity}]
+       (assoc acc ident schema-entity))
+     {}
+     new-schema)
+    new-schema))
+
+(defn- validate-write-schema [schema]
+  (when-not (ds/old-schema-valid? schema)
+    (raise "Incomplete schema attributes, expected at least :db/valueType, :db/cardinality"
+           (ds/explain-old-schema schema))))
+
+(defn init-max-eid [eavt]
+  ;; solved with reverse slice first in datascript
+  (if-let [datoms (di/-slice
+                   eavt
+                   (datom e0 nil nil tx0)
+                   (datom (dec tx0) nil nil txmax)
+                   :eavt)]
+    (-> datoms vec rseq first :e)                           ;; :e of last datom in slice
+    e0))
+
+(defn get-max-tx [eavt]
+  (transduce (map (fn [^Datom d] (datom-tx d))) max tx0 (di/-all eavt)))
+
+(def ref-datoms                                             ;; maps enums as well
+  (let [idents (reduce (fn [m {:keys [db/ident db/id]}]
+                         (assoc m ident id))
+                       {}
+                       system-schema)]
+    (->> system-schema
+         (mapcat
+          (fn [{:keys [db/id] :as i}]
+            (reduce-kv
+             (fn [coll k v]
+               (let [v-ref (idents v)
+                       ;; datom val can be system schema eid (v-ref), or ident or regular (v)
+                     d-val (if (and (not= k :db/ident) v-ref) v-ref v)]
+                 (conj coll (dd/datom id (idents k) d-val tx0))))
+             []
+             (dissoc i :db/id))))
+         vec)))
+
+(defn get-ident-ref-map
+  "Maps IDs of system entities to their names (keyword) and attribute names to the attribute's specification"
+  [schema]
+  (reduce
+   (fn [m [a {:keys [db/id]}]]
+     (when a
+       (assoc m a id)))
+   {}
+   schema))
+
+(defn ^DB empty-db
+  "Prefer create-database in api, schema only in index for attribute reference database."
+  ([] (empty-db nil nil nil))
+  ([schema] (empty-db schema nil nil))
+  ([schema user-config] (empty-db schema user-config nil))
+  ([schema user-config store]
+   {:pre [(or (nil? schema) (map? schema) (coll? schema))]}
+   (let [complete-config (merge (dc/storeless-config) user-config)
+         _ (dc/validate-config complete-config)
+         complete-config (dc/remove-nils complete-config)
+         {:keys [keep-history? index schema-flexibility attribute-refs?]} complete-config
+         on-read? (= :read schema-flexibility)
+         schema (to-old-schema schema)
+         _ (if on-read?
+             (validate-schema schema)
+             (validate-write-schema schema))
+         complete-schema (merge schema
+                                (if attribute-refs?
+                                  c/ref-implicit-schema
+                                  c/non-ref-implicit-schema))
+         rschema (dbu/rschema complete-schema)
+         ident-ref-map (if attribute-refs? (get-ident-ref-map complete-schema) {})
+         ref-ident-map (if attribute-refs? (clojure.set/map-invert ident-ref-map) {})
+         system-entities (if attribute-refs? c/system-entities #{})
+         indexed (if attribute-refs?
+                   (set (map ident-ref-map (:db/index rschema)))
+                   (:db/index rschema))
+         index-config (merge (:index-config complete-config)
+                             {:indexed indexed})
+         eavt (if attribute-refs?
+                (di/init-index index store ref-datoms :eavt 0 index-config)
+                (di/empty-index index store :eavt index-config))
+         aevt (if attribute-refs?
+                (di/init-index index store ref-datoms :aevt 0 index-config)
+                (di/empty-index index store :aevt index-config))
+         indexed-datoms (filter (fn [[_ a _ _]] (contains? indexed a)) ref-datoms)
+         avet (if attribute-refs?
+                (di/init-index index store indexed-datoms :avet 0 index-config)
+                (di/empty-index index store :avet index-config))
+         max-eid (if attribute-refs? ue0 e0)
+         max-tx (if attribute-refs? utx0 tx0)]
+     (map->DB
+      (merge
+       {:schema complete-schema
+        :rschema rschema
+        :config complete-config
+        :eavt eavt
+        :aevt aevt
+        :avet avet
+        :max-eid max-eid
+        :max-tx max-tx
+        :hash 0
+        :system-entities system-entities
+        :ref-ident-map ref-ident-map
+        :ident-ref-map ident-ref-map
+        :meta (tools/meta-data)
+        :op-count (if attribute-refs? (count ref-datoms) 0)}
+       (when keep-history?                                  ;; no difference for attribute references since no update possible
+         {:temporal-eavt eavt
+          :temporal-aevt aevt
+          :temporal-avet avet}))))))
+
+(defn ^DB init-db
+  ([datoms] (init-db datoms nil nil nil))
+  ([datoms schema] (init-db datoms schema nil nil))
+  ([datoms schema user-config] (init-db datoms schema user-config nil))
+  ([datoms schema user-config store]
+   (validate-schema schema)
+   (let [{:keys [index keep-history? attribute-refs?] :as complete-config}  (merge (dc/storeless-config) user-config)
+         _ (dc/validate-config complete-config)
+         complete-schema (merge schema
+                                (if attribute-refs?
+                                  c/ref-implicit-schema
+                                  c/non-ref-implicit-schema))
+         rschema (dbu/rschema complete-schema)
+         ident-ref-map (if attribute-refs? (get-ident-ref-map schema) {})
+         ref-ident-map (if attribute-refs? (clojure.set/map-invert ident-ref-map) {})
+         system-entities (if attribute-refs? c/system-entities #{})
+
+         indexed (if attribute-refs?
+                   (set (map ident-ref-map (:db/index rschema)))
+                   (:db/index rschema))
+         new-datoms (if attribute-refs? (concat ref-datoms datoms) datoms)
+         indexed-datoms (filter (fn [[_ a _ _]] (contains? indexed a)) new-datoms)
+         op-count 0
+         index-config (assoc (:index-config complete-config)
+                             :indexed indexed)
+         avet (di/init-index index store indexed-datoms :avet op-count index-config)
+         eavt (di/init-index index store new-datoms :eavt op-count index-config)
+         aevt (di/init-index index store new-datoms :aevt op-count index-config)
+         max-eid (init-max-eid eavt)
+         max-tx (get-max-tx eavt)
+         op-count (count new-datoms)]
+     (map->DB (merge {:schema complete-schema
+                      :rschema rschema
+                      :config complete-config
+                      :eavt eavt
+                      :aevt aevt
+                      :avet avet
+                      :max-eid max-eid
+                      :max-tx max-tx
+                      :op-count op-count
+                      :hash (reduce #(+ %1 (hash %2)) 0 datoms)
+                      :system-entities system-entities
+                      :meta (tools/meta-data)
+                      :ref-ident-map ref-ident-map
+                      :ident-ref-map ident-ref-map}
+                     (when keep-history?
+                       {:temporal-eavt (di/empty-index index store :eavt index-config)
+                        :temporal-aevt (di/empty-index index store :aevt index-config)
+                        :temporal-avet (di/empty-index index store :avet index-config)}))))))
+
+(defn metrics [^DB db]
+  (let [update-count-in (fn [m ks] (update-in m ks #(if % (inc %) 1)))
+        counts-map (->> (di/-seq (.-eavt db))
+                        (reduce (fn [m ^Datom datom]
+                                  (-> m
+                                      (update-count-in [:per-attr-counts (dbi/-ident-for db (.-a datom))])
+                                      (update-count-in [:per-entity-counts (.-e datom)])))
+                                {:per-attr-counts    {}
+                                 :per-entity-counts  {}}))
+        sum-indexed-attr-counts (fn [attr-counts] (->> attr-counts
+                                                       (m/filter-keys #(contains? (:db/index (.-rschema db)) %))
+                                                       vals
+                                                       (reduce + 0)))]
+    (cond-> (merge counts-map
+                   {:count (di/-count (.-eavt db))
+                    :avet-count (->> (:per-attr-counts counts-map)
+                                     sum-indexed-attr-counts)})
+      (dbi/-keep-history? db)
+      (merge {:temporal-count (di/-count (.-temporal-eavt db))
+              :temporal-avet-count (->> (di/-seq (.-temporal-eavt db))
+                                        (reduce (fn [m ^Datom datom] (update-count-in m [(dbi/-ident-for db (.-a datom))]))
+                                                {})
+                                        sum-indexed-attr-counts)}))))
+
