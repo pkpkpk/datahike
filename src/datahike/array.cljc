@@ -1,6 +1,6 @@
 (ns ^:no-doc datahike.array
-  #?(:clj (:require [hitchhiker.tree.node :as n]
-                    [goog.array]))
+  #?(:clj (:require [hitchhiker.tree.node :as n]))
+  #?(:cljs (:require [goog.array]))
   #?(:clj (:import [java.util Arrays])))
 
 #?(:clj
