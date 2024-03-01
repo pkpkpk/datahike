@@ -175,9 +175,15 @@
   (-delete-database [config])
   (-database-exists? [config]))
 
+
+;; TODO the impl bodies for -create-database & -create-database
+;; appear to be written for a variadic second arg which is not supported in cljs
+;; This needs testing. -Pat
+
 (extend-protocol PDatabaseManager
   #?(:clj String :cljs string)
-  (-create-database [uri & opts]
+  (-create-database #?(:clj [uri & opts]
+                       :cljs [uri opts])
     (apply -create-database (dc/uri->config uri) opts))
 
   (-delete-database [uri]
@@ -200,7 +206,8 @@
           (ds/release-store store-config raw-store)
           false))))
 
-  (-create-database [config & deprecated-config]
+  (-create-database #?(:clj [config & deprecated-config]
+                       :cljs [config deprecated-config])
     (let [{:keys [keep-history?] :as config} (dc/load-config config deprecated-config)
           store-config (:store config)
           store (ds/add-cache-and-handlers (ds/empty-store store-config) config)
