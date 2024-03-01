@@ -11,7 +11,7 @@
    [datahike.middleware.query]
    [datahike.pull-api :as dpa]
    [datahike.query-stats :as dqs]
-   [datahike.tools :as dt]
+   [datahike.tools :as dt #?(:clj :refer :cljs :refer-macros) [some-of]]
    [datahike.middleware.utils :as middleware-utils]
    [datalog.parser :refer [parse]]
    [datalog.parser.impl :as dpi]
@@ -309,7 +309,7 @@
                                          true (map vector (cons x more) more))
                             :cljs (apply >= x more)))
 
-  Object ;; default
+  #?(:clj Object :cljs object)
   (-strictly-decreasing? [x more] (reduce (fn [res [v1 s2]] (if (neg? (compare  v1 s2))
                                                               res
                                                               (reduced false)))
@@ -701,7 +701,7 @@
   #?(:cljs nil
      :clj (when (namespace sym)
             (when-some [v (resolve sym)] @v))))
-
+;
 #?(:clj (def ^:private find-method
           (memoize
            (fn find-method-impl [^Class this-class method-name args-classes]
@@ -798,13 +798,6 @@
                     (first clause)))))
 
 (def rule-seqid (atom 0))
-
-#?(:clj
-   (defmacro some-of
-     ([] nil)
-     ([x] x)
-     ([x & more]
-      `(let [x# ~x] (if (nil? x#) (some-of ~@more) x#)))))
 
 (defn expand-rule [clause context _used-args]
   (let [[rule & call-args] clause
@@ -978,7 +971,7 @@ The query engine will evaluate the pattern `[?e :friend 3]`. For the strategies
 Instead, they will ask for all tuples from the database and then filter them, so
 the fact that `?e` can be bound to an impossible entity id `\"A\"` is not a problem.
 
-But with the strategy `select-all`, the substituted pattern will become 
+But with the strategy `select-all`, the substituted pattern will become
 
 [\"A\" :friend 3]
 
@@ -1054,7 +1047,7 @@ in those cases.
   (:vars rel-data))
 
 (defn expansion-rel-data
-  "Given all the relations `rels` from a context and the `vars` found in a pattern, 
+  "Given all the relations `rels` from a context and the `vars` found in a pattern,
 return a sequence of maps where each map has a relation and the subset of `vars`
 mentioned in that relation. Relations that don't mention any vars are omitted."
   [rels vars]
@@ -1108,30 +1101,30 @@ mentioned in that relation. Relations that don't mention any vars are omitted."
   (relprod-filter relprod (comp key-set rel-data-key)))
 
 (defn select-all
-  "This is a relprod strategy that will result in all 
+  "This is a relprod strategy that will result in all
 possible combinations of relations substituted in the pattern.
- It may be faster or slower than no strategy at all depending 
-on the data. 
+ It may be faster or slower than no strategy at all depending
+on the data.
 
 This might be the strategy used by Datomic,
 which can be seen if we request 'Query stats' from Datomic:
 
 https://docs.datomic.com/pro/api/query-stats.html"
   [relprod]
-  {:pre [(relprod? relprod)]}  
+  {:pre [(relprod? relprod)]}
   (relprod-filter relprod (constantly true)))
 
 (defn select-simple
-  "This is a relprod strategy that will perform at least as 
-well as no strategy at all because it will result in at most 
+  "This is a relprod strategy that will perform at least as
+well as no strategy at all because it will result in at most
 one expanded pattern (or none) that is possibly more specific."
   [relprod]
   {:pre [(relprod? relprod)]}
   (relprod-filter relprod #(<= (:tuple-count %) 1)))
 
 (defn expand-once
-  "This strategy first performs `relprod-select-simple` and 
-then does one more expansion with the smallest `:tuple-count`. Just 
+  "This strategy first performs `relprod-select-simple` and
+then does one more expansion with the smallest `:tuple-count`. Just
 like `relprod-select-all`, it is not necessarily always faster
 than doing no expansion at all."
   [relprod]
@@ -1179,7 +1172,7 @@ than doing no expansion at all."
     (binding [*lookup-attrs* (if (satisfies? dbi/IDB source)
                                (dynamic-lookup-attrs source pattern-before-expansion)
                                *lookup-attrs*)]
-      
+
       (cond-> (update context :rels collapse-rels relation)
         (:stats context) (assoc :tmp-stats {:type :lookup
                                             :lookup-stats lookup-stats})))))
