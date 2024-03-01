@@ -13,7 +13,7 @@
             [hasch.core :refer [uuid]]
             [superv.async :refer [go-try- <?-]]
             [clojure.core.async :refer [poll!]]
-            [konserve.utils :refer [async+sync *default-sync-translation*]]))
+            [konserve.utils #?(:clj :refer :cljs :refer-macros) [async+sync]]))
 
 ;; mapping to storage
 
@@ -33,13 +33,14 @@
       ;; at least as new as the current commit, maybe some more writes are included
       (swap! pending-writes (fn [old] (reset! current-writes old) [])))
     (if sync?
+      ;; TODO forbid this path in cljs?
       (loop [pfs @current-writes]
         (let [f (first pfs)]
           (when f
             (let [fv (poll! f)]
               (if fv
                 (recur (rest pfs))
-                (do (Thread/sleep 1)
+                (do #?(:clj (Thread/sleep 1))
                     (recur pfs)))))))
       (go-try-
        (loop [[f & r] @current-writes]
@@ -130,7 +131,7 @@
   ([db parents]
    (commit! db parents true))
   ([db parents sync?]
-   (async+sync sync? *default-sync-translation*
+   (async+sync sync? konserve.utils/*default-sync-translation*
                (go-try-
                 (let [{:keys [store config]} db
                       parents       (or parents #{(get config :branch)})
@@ -175,7 +176,7 @@
   (-database-exists? [config]))
 
 (extend-protocol PDatabaseManager
-  String
+  #?(:clj String :cljs string)
   (-create-database [uri & opts]
     (apply -create-database (dc/uri->config uri) opts))
 
@@ -185,7 +186,7 @@
   (-database-exists? [uri]
     (-database-exists? (dc/uri->config uri)))
 
-  clojure.lang.IPersistentMap
+  #?(:clj clojure.lang.IPersistentMap :cljs IMap)
   (-database-exists? [config]
     (let [config (dc/load-config config)
           store-config (:store config)
