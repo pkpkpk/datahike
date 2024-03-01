@@ -152,8 +152,8 @@
   #?(:clj (.getHostAddress (InetAddress/getLocalHost))
      :cljs (raise "Not supported yet." {:type :hostname-not-supported-yet})))
 
-#?(:clj
-(def datahike-logo (slurp (io/resource "datahike-logo.txt"))))
+; #?(:clj
+; (def datahike-logo (slurp (io/resource "datahike-logo.txt"))))
 
 
 (defmacro with-destructured-vector [v & var-expr-pairs]

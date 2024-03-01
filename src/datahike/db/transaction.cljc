@@ -439,13 +439,17 @@
       (transact-tx-data report' es))))
 
 (defn assert-preds [db [_ e _ preds]]
-  (reduce
-   (fn [coll pred]
-     (if (#?(:clj (resolve pred)
-             :cljs pred) db e)
-       coll
-       (conj coll pred)))
-   #{} preds))
+  #?(:cljs
+     (throw (ex-info "resolve is not supported at this time"
+                     {:caller 'datahike.db.transaction/assert-preds
+                      :preds preds}))
+     :clj
+     (reduce
+      (fn [coll pred]
+        (if ((resolve pred) db e)
+          coll
+          (conj coll pred)))
+      #{} preds)))
 
 (def builtin-op?
   #{:db.fn/call
