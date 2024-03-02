@@ -3,6 +3,7 @@
    [superv.async :refer [throw-if-exception-]]
    #?(:clj [clojure.java.io :as io])
    [taoensso.timbre :as log])
+  #?(:cljs (:require-macros [datahike.tools :refer [raise]]))
   #?(:clj (:import [java.util Properties UUID Date]
                    [java.net InetAddress])))
 
@@ -53,6 +54,7 @@
 ; *   By using this software in any fashion, you are agreeing to be bound by
 ; * 	 the terms of this license.
 ; *   You must not remove this notice, or any other, from this software.
+#?(:clj
 (defn throwable-promise
   "Returns a promise object that can be read with deref/@, and set,
   once only, with deliver. Calls to deref/@ prior to delivery will
@@ -80,7 +82,28 @@
         (when (and (pos? (.getCount d))
                    (compare-and-set! v d x))
           (.countDown d)
-          this)))))
+          this))))))
+
+#?(:cljs
+(defn throwable-promise []
+  (let [d #js{:n 1}
+        v (atom d)]
+    (reify
+      cljs.core/IDeref
+      (-deref [this]
+        (if-not (realized? this)
+          (throw (js/Error. "blocking deref is not supported in cljs"))
+          (throw-if-exception- @v)))
+      cljs.core/IPending
+      (-realized? [_] (zero? (.-n d)))
+      cljs.core/IFn
+      (invoke [this x]
+        (when (and (pos? (.-n d))
+                   (compare-and-set! v d x))
+          (set! (.-n d) 0)
+          this))))))
+
+#?(:cljs (defn deliver [promise val] (promise val)))
 
 (defn get-version
   "Retrieves the current version of a dependency. Thanks to https://stackoverflow.com/a/33070806/10978897"
@@ -109,8 +132,8 @@
    :konserve/version konserve-version
    :hitchhiker.tree/version hitchhiker-tree-version
    :persistent.set/version persistent-set-version
-   :datahike/id (UUID/randomUUID)
-   :datahike/created-at (Date.)})
+   :datahike/id (random-uuid)
+   :datahike/created-at #?(:clj (Date.) :cljs (js/Date.))})
 
 (defn deep-merge
   "Recursively merges maps together. If all the maps supplied have nested maps

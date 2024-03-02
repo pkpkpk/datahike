@@ -1,11 +1,11 @@
 (ns ^:no-doc datahike.writer
-  (:require [superv.async :refer [S thread-try <?-]]
+  (:require [superv.async :refer [S #?(:clj thread-try) <?-]]
             [taoensso.timbre :as log]
             [datahike.core]
             [datahike.writing :as w]
-            [datahike.tools :as dt :refer [throwable-promise get-time-ms]]
+            [datahike.tools :as dt :refer [throwable-promise get-time-ms #?(:cljs deliver)]]
             [clojure.core.async :refer [chan close! promise-chan put! go go-loop <! >! poll! buffer timeout]])
-  (:import [clojure.lang ExceptionInfo]))
+  #?(:clj (:import [clojure.lang ExceptionInfo])))
 
 (defprotocol PWriter
   (-dispatch! [_ arg-map] "Returns a channel that resolves when the transaction finalizes.")
@@ -38,7 +38,7 @@
         commit-queue-buffer         (buffer commit-queue-size)
         commit-queue                (chan commit-queue-buffer)]
     [transaction-queue commit-queue
-     (thread-try
+     (#?(:clj thread-try :cljs try)
       S
       (let [store (:store @(:wrapped-atom connection))]
         ;; processing loop
@@ -54,18 +54,20 @@
                             (apply op-fn connection args)
                             ;; Only catch ExceptionInfo here (intentionally rejected transactions).
                             ;; Any other exceptions should crash the writer and signal the supervisor.
-                            (catch Exception e
+                            (catch #?(:clj Exception :cljs js/Error) e
                               (log/error "Error during invocation" invocation e args)
                               ;; take a guess that a NPE was triggered by an invalid connection
                               ;; short circuit on errors
-                              (put! callback
-                                    (if (= (type e) NullPointerException)
-                                      (ex-info "Null pointer encountered in invocation. Connection may have been invalidated, e.g. through db deletion, and needs to be released everywhere."
-                                               {:type       :writer-error-during-invocation
-                                                :invocation invocation
-                                                :connection connection
-                                                :error      e})
-                                      e))
+                              #?(:cljs (put! callback e)
+                                 :clj
+                                 (put! callback
+                                       (if (= (type e) NullPointerException)
+                                         (ex-info "Null pointer encountered in invocation. Connection may have been invalidated, e.g. through db deletion, and needs to be released everywhere."
+                                                  {:type       :writer-error-during-invocation
+                                                   :invocation invocation
+                                                   :connection connection
+                                                   :error      e})
+                                         e)))
                               :error))]
                 (when-not (= res :error)
                   (when (> (count commit-queue-buffer) (/ commit-queue-size 2))
@@ -103,7 +105,7 @@
                                     (assoc-in [:tx-meta :db/commitId] commit-id)
                                     (assoc :db-after commit-db))]
                         (put! callback res))))
-                  (catch Exception e
+                  (catch #?(:clj Exception :cljs js/Error) e
                     (doseq [[_ callback] @txs]
                       (put! callback e))
                     (log/error "Writer thread shutting down because of commit error " e)
