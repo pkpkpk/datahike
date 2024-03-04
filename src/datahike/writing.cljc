@@ -192,7 +192,7 @@
   (-database-exists? [uri]
     (-database-exists? (dc/uri->config uri)))
 
-  #?(:clj clojure.lang.IPersistentMap :cljs IMap)
+  #?(:clj clojure.lang.IPersistentMap :cljs PersistentArrayMap)
   (-database-exists? [config]
     (let [config (dc/load-config config)
           store-config (:store config)
