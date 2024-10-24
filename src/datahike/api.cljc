@@ -1,13 +1,14 @@
 (ns datahike.api
   "Public API for datahike. Expanded from api.specification."
   (:refer-clojure :exclude [filter])
+  #?(:cljs (:require-macros [datahike.api.macros :refer [emit-api]]))
   (:require [datahike.connector :as dc]
             [datahike.config :as config]
             [datahike.api.specification :refer [api-specification spec-args->argslist]]
             [datahike.api.impl]
             [clojure.spec.alpha :as s]
             [datahike.writer :as dw]
-            [datahike.http.writer]
+            #?(:clj [datahike.http.writer])
             [datahike.writing :as writing]
             [datahike.constants :as const]
             [datahike.core :as dcore]
@@ -25,6 +26,7 @@
               [datahike.db HistoricalDB AsOfDB SinceDB FilteredDB]
               [datahike.impl.entity Entity])))
 
+#?(:clj
 (doseq [[n {:keys [args ret fn doc impl]}] api-specification]
   (eval
    `(s/fdef ~n :args ~args :ret ~ret ~@(when fn [:fn fn])))
@@ -33,4 +35,8 @@
       ~(with-meta n
          {:arglists `(spec-args->argslist (quote ~args))
           :doc      doc})
-      ~impl)))
+      ~impl))))
+
+
+
+#?(:cljs (emit-api))

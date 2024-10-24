@@ -135,8 +135,7 @@
       (if-not (schema v-ident)
         (let [err-msg (str "Schema with attribute " v-ident " does not exist")
               err-map {:error :retract/schema :attribute v-ident}]
-          (throw #?(:clj (ex-info err-msg err-map)
-                    :cljs (error err-msg err-map))))
+          (throw (ex-info err-msg err-map)))
         (-> (assoc-in db [:schema e] (dissoc (schema v-ident) a-ident))
             (update-in [:schema] #(dissoc % v-ident))
             (update-in [:ident-ref-map] #(dissoc % v-ident))
@@ -147,8 +146,7 @@
           (update-in db [:schema e] #(dissoc % a-ident v-ident)))
         (let [err-msg (str "Schema with entity id " e " does not exist")
               err-map {:error :retract/schema :entity-id e :attribute a :value e}]
-          (throw #?(:clj (ex-info err-msg err-map)
-                    :cljs (error err-msg err-map))))))))
+          (throw (ex-info err-msg err-map)))))))
 
 ;; In context of `with-datom` we can use faster comparators which
 ;; do not check for nil (~10-15% performance gain in `transact`)
@@ -250,7 +248,7 @@
             ;; Optimistic removal of the schema entry (because we don't know whether it is already present or not)
       schema? (try
                 (-> db (remove-schema datom) update-rschema)
-                (catch clojure.lang.ExceptionInfo _e
+                (catch #?(:clj clojure.lang.ExceptionInfo :cljs ExceptionInfo) _e
                   db))
 
       keep-history? (update-in [:temporal-eavt] #(di/-temporal-upsert % datom :eavt op-count old-datom))
@@ -444,12 +442,17 @@
       (transact-tx-data report' es))))
 
 (defn assert-preds [db [_ e _ preds]]
-  (reduce
-   (fn [coll pred]
-     (if ((resolve pred) db e)
-       coll
-       (conj coll pred)))
-   #{} preds))
+  #?(:cljs
+     (throw (ex-info "resolve is not supported at this time"
+                     {:caller 'datahike.db.transaction/assert-preds
+                      :preds preds}))
+     :clj
+     (reduce
+      (fn [coll pred]
+        (if ((resolve pred) db e)
+          coll
+          (conj coll pred)))
+      #{} preds)))
 
 (def builtin-op?
   #{:db.fn/call

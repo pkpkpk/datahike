@@ -1,12 +1,14 @@
 (ns ^:no-doc datahike.store
   (:require [clojure.spec.alpha :as s]
-            [konserve.filestore :as fs]
+            [#?(:clj konserve.filestore
+                :cljs konserve.node-filestore) :as fs]
             [konserve.memory :as mem]
             [environ.core :refer [env]]
             [datahike.index :as di]
             [datahike.tools :as dt]
             [konserve.cache :as kc]
-            [clojure.core.cache :as cache]
+            #?(:clj [clojure.core.cache :as cache]
+               :cljs [cljs.cache :as cache])
             [taoensso.timbre :refer [info]]
             [zufall.core :refer [rand-german-mammal]])
   #?(:clj (:import [java.nio.file Paths])))
@@ -29,7 +31,8 @@
   :backend)
 
 (defmethod empty-store :default [{:keys [backend]}]
-  (throw (IllegalArgumentException. (str "Can't create a store with scheme: " backend))))
+  (throw (#?(:clj IllegalArgumentException. :cljs js/Error.)
+           (str "Can't create a store with scheme: " backend))))
 
 (defmulti delete-store
   "Deletes an existing store"
@@ -37,7 +40,8 @@
   :backend)
 
 (defmethod delete-store :default [{:keys [backend]}]
-  (throw (IllegalArgumentException. (str "Can't delete a store with scheme: " backend))))
+  (throw (#?(:clj IllegalArgumentException. :cljs js/Error.)
+           (str "Can't delete a store with scheme: " backend))))
 
 (defmulti connect-store
   "Makes a connection to an existing store"
@@ -45,7 +49,8 @@
   :backend)
 
 (defmethod connect-store :default [{:keys [backend]}]
-  (throw (IllegalArgumentException. (str "Can't connect to store with scheme: " backend))))
+  (throw (#?(:clj IllegalArgumentException. :cljs js/Error.)
+           (str "Can't connect to store with scheme: " backend))))
 
 (defmulti release-store
   "Releases the connection to an existing store (optional)."
@@ -123,7 +128,10 @@
   (fs/connect-fs-store path :opts {:sync? true} :config config))
 
 (defn- get-working-dir []
-  (.toString (.toAbsolutePath (Paths/get "" (into-array String [])))))
+  #?(:clj (.toString (.toAbsolutePath (Paths/get "" (into-array String []))))
+     :cljs (if (= "nodejs" *target*)
+             (.cwd js/process)
+             (throw (js/Error. "get-working-dir is not supported in this runtime")))))
 
 (defmethod default-config :file [config]
   (merge
