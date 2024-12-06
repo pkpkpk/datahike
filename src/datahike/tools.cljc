@@ -128,8 +128,8 @@
    :konserve/version konserve-version
    :hitchhiker.tree/version hitchhiker-tree-version
    :persistent.set/version persistent-set-version
-   :datahike/id (UUID/randomUUID)
-   :datahike/created-at (Date.)})
+   :datahike/id #?(:clj (UUID/randomUUID) :cljs (random-uuid))
+   :datahike/created-at #?(:clj (Date.) :cljs (js/Date.))})
 
 (defn deep-merge
   "Recursively merges maps together. If all the maps supplied have nested maps
@@ -171,7 +171,7 @@
   #?(:clj (.getHostAddress (InetAddress/getLocalHost))
      :cljs (raise "Not supported yet." {:type :hostname-not-supported-yet})))
 
-(def datahike-logo (slurp (io/resource "datahike-logo.txt")))
+#?(:clj (def datahike-logo (slurp (io/resource "datahike-logo.txt"))))
 
 (defmacro with-destructured-vector [v & var-expr-pairs]
   {:pre [(even? (count var-expr-pairs))]}

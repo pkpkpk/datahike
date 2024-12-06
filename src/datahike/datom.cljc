@@ -246,13 +246,13 @@
      (.compareTo ^Comparable a1 a2)))
 
 (defn- class-name [x]
-  (let [c (class x)]
-    (.getName ^Class c)))
+  #?(:clj (.getName (class x))
+     :cljs (type x)))
 
 (defn- safe-compare [a b]
   (try
     (compare a b)
-    (catch Exception _e
+    (catch #?(:clj Exception :cljs js/Error) _e
       (compare (class-name a)
                (class-name b)))))
 

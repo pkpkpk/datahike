@@ -1,6 +1,5 @@
 {:deps {:aliases [:cljs]}
  :builds
- {:node-tests
-  {:target :node-tests
-   :output-dir "target/out"
-   :output-to "target/out/datahike.tests.node.js"}}}
+ {:node-tests {:target :node-tests
+               :output-dir "target/out"
+               :output-to "target/out/node-tests.js"}}}
