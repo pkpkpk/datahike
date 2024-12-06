@@ -1,6 +1,6 @@
 {:deps {:aliases [:cljs]}
  :builds
- {:dev
-  {:target :nodejs
-   :output-dir "public/js"
-   :asset-path "/js"}}}
+ {:node-tests
+  {:target :node-tests
+   :output-dir "target/out"
+   :output-to "target/out/datahike.tests.node.js"}}}
