@@ -1,4 +1,5 @@
 (ns ^:no-doc datahike.index.persistent-set
+  #?(:cljs (:require-macros [datahike.index.persistent-set :refer [generate-slice-comparator-constructor]]))
   (:require [me.tonsky.persistent-sorted-set :as psset]
             [me.tonsky.persistent-sorted-set.arrays :as arrays]
             #?@(:clj  [[clojure.core.cache :as cache]
@@ -164,7 +165,7 @@
     (psset/walk-addresses pset (fn [address] (swap! addresses conj address)))
     @addresses))
 
-(extend-type PersistentSortedSet
+(extend-type #?(:clj PersistentSortedSet :cljs psset/BTSet)
   IIndex
   (-slice [^PersistentSortedSet pset from to index-type]
     (psset/slice pset from to (slice-comparator-constructor index-type from to)))
