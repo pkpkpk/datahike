@@ -7,7 +7,7 @@
             [datahike.tools :as dt]
             [datahike.store :as ds]
             [datahike.index :as di])
-  (:import [java.net URI]))
+ #?(:clj (:import [java.net URI])))
 
 ;; global
 (def ^:dynamic *schema-meta-cache-size* (env :schema-meta-cache-size 1024))
@@ -101,7 +101,7 @@
 (defn int-from-env
   [key default]
   (try
-    (Integer/parseInt (get env key (str default)))
+    (#?(:clj Integer/parseInt :cljs js/parseInt) (get env key (str default)))
     (catch Exception _ default)))
 
 (defn bool-from-env

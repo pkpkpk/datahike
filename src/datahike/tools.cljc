@@ -2,6 +2,7 @@
   #?(:cljs (:require-macros [datahike.tools :refer [raise]]))
   (:require
    [superv.async :refer [throw-if-exception-]]
+   [clojure.core.async.impl.protocols :as async-impl]
    [clojure.core.async :as async]
    #?(:clj [clojure.java.io :as io])
    [taoensso.timbre :as log])
@@ -68,8 +69,7 @@
   (let [msgs (butlast fragments)
         data (last fragments)]
     (list `(log/log! :error :p ~fragments ~{:?line (:line (meta &form))})
-          `(throw #?(:clj  (ex-info (str ~@(map (fn [m#] (if (string? m#) m# (list 'pr-str m#))) msgs)) ~data)
-                     :cljs (error (str ~@(map (fn [m#] (if (string? m#) m# (list 'pr-str m#))) msgs)) ~data))))))
+          `(throw (ex-info (str ~@(map (fn [m#] (if (string? m#) m# (list 'pr-str m#))) msgs)) ~data)))))
 
 ;; adapted from https://clojure.atlassian.net/browse/CLJ-2766
 #?(:clj
