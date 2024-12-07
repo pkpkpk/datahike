@@ -22,8 +22,7 @@
         metosin/jsonista                            {:mvn/version "0.3.7"}
         pkpkpk/cljs-cache                           {:git/url "https://github.com/pkpkpk/cljs-cache"
                                                      :git/tag "datahike-fix"
-                                                     :git/sha "a0e7298fb90daadbf4dcf12ae996396e68cb1f3e"
-                                                     :exclusions [org.clojure/clojurescript]}}
+                                                     :git/sha "a0e7298fb90daadbf4dcf12ae996396e68cb1f3e"}}
 
  :paths ["src" "target/classes" "resources"]
 
