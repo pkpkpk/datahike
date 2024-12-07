@@ -169,7 +169,7 @@
 
 (defn get-hostname []
   #?(:clj (.getHostAddress (InetAddress/getLocalHost))
-     :cljs (raise "Not supported yet." {:type :hostname-not-supported-yet})))
+     :cljs (raise "Not supported." {:type :hostname-not-supported})))
 
 #?(:clj (def datahike-logo (slurp (io/resource "datahike-logo.txt"))))
 
