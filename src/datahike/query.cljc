@@ -1,4 +1,5 @@
 (ns ^:no-doc datahike.query
+  #?(:cljs (:require-macros [datahike.query :refer [basic-index-selector make-vec-lookup-ref-replacer some-of substitution-expansion]]))
   (:require
    [#?(:cljs cljs.reader :clj clojure.edn) :as edn]
    [clojure.set :as set]
@@ -32,7 +33,7 @@
                    [java.lang.reflect Method]
                    [java.util Date Map HashSet HashSet])))
 
-(set! *warn-on-reflection* true)
+#?(:clj (set! *warn-on-reflection* true))
 
 ;; ----------------------------------------------------------------------------
 
@@ -1162,8 +1163,8 @@
     (fn [x] (contains? s x))))
 
 (defn extend-predicate [predicate feature-extractor features]
-  {:pre [(or (set? features)
-             (instance? HashSet features))]}
+  {:pre [#?(:clj (or (set? features) (instance? HashSet features))
+            :cljs (set? features))]}
   (let [this-pred (predicate-from-set features)]
     (if (nil? feature-extractor)
       predicate
@@ -1312,7 +1313,7 @@
                 ~(mapv (fn [index i] `(~replacer ~index (nth ~tuple ~i)))
                        pinds
                        (range))
-                (catch Exception e# nil))))))))
+                (catch #?(:clj Exception :cljs js/Error) e# nil))))))))
 
 (def vec-lookup-ref-replacer (make-vec-lookup-ref-replacer 5))
 
@@ -1514,7 +1515,7 @@
                           step)
              datoms (try
                       (backend-fn e a v tx added?)
-                      (catch Exception e
+                      (catch #?(:clj Exception :cljs js/Error) e
                         (throw e)))]
          (reduce inner-step
                  dst

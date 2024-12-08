@@ -14,7 +14,8 @@
             [hasch.core :refer [uuid]]
             [superv.async :refer [go-try- <?-]]
             [clojure.core.async :refer [poll!]]
-            [konserve.utils :refer [async+sync *default-sync-translation*]]))
+            [konserve.utils :refer [#?(:clj async+sync) *default-sync-translation*]
+             #?@(:cljs [:refer-macros [async+sync]])]))
 
 ;; mapping to storage
 
