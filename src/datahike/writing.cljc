@@ -40,8 +40,13 @@
             (let [fv (poll! f)]
               (if fv
                 (recur (rest pfs))
-                (do (Thread/sleep 1)
-                    (recur pfs)))))))
+                #?(:cljs
+                   (throw (ex-info "sync cljs writers must be finished before flush-pending-writes calls"
+                                   {:pending-writes @pending-writes
+                                    :current-writes @current-writes}))
+                   :clj
+                   (do (Thread/sleep 1)
+                       (recur pfs))))))))
       (go-try-
        (loop [[f & r] @current-writes]
          (when f (<?- f) (recur r)))))))
@@ -180,9 +185,9 @@
   (-database-exists? [config]))
 
 (extend-protocol PDatabaseManager
-  String
-  (-create-database [uri & opts]
-    (apply -create-database (dc/uri->config uri) opts))
+  #?(:clj String :cljs string)
+  (-create-database [uri opts]
+    (-create-database (dc/uri->config uri) opts))
 
   (-delete-database [uri]
     (-delete-database (dc/uri->config uri)))
@@ -190,7 +195,7 @@
   (-database-exists? [uri]
     (-database-exists? (dc/uri->config uri)))
 
-  clojure.lang.IPersistentMap
+  #?(:clj clojure.lang.IPersistentMap :cljs PersistentArrayMap)
   (-database-exists? [config]
     (let [config (dc/load-config config)
           store-config (:store config)
@@ -204,7 +209,7 @@
           (ds/release-store store-config raw-store)
           false))))
 
-  (-create-database [config & deprecated-config]
+  (-create-database [config deprecated-config]
     (let [{:keys [keep-history?] :as config} (dc/load-config config deprecated-config)
           store-config (:store config)
           store (ds/add-cache-and-handlers (ds/empty-store store-config) config)
