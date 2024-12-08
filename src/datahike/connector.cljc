@@ -11,7 +11,7 @@
             [taoensso.timbre :as log]
             [clojure.spec.alpha :as s]
             [clojure.data :refer [diff]])
-  (:import [clojure.lang IDeref IAtom IMeta ILookup IRef]))
+  #?(:clj (:import [clojure.lang IDeref IAtom IMeta ILookup IRef])))
 
 ;; connection
 
