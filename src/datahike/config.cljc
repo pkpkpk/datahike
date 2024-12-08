@@ -169,7 +169,7 @@
                  (keyword "datahike.index" (:datahike-index env))
                  *default-index*)
          config {:store store-config
-                 :initial-tx (:datahike-intial-tx env)
+                 :initial-tx (:datahike-initial-tx env)
                  :keep-history? (bool-from-env :datahike-keep-history *default-keep-history?*)
                  :attribute-refs? (bool-from-env :datahike-attribute-refs *default-attribute-refs?*)
                  :schema-flexibility (keyword (:datahike-schema-flexibility env *default-schema-flexibility*))
@@ -193,7 +193,8 @@
      (when (and attribute-refs? (= :read schema-flexibility))
        (throw (ex-info "Attribute references cannot be used with schema-flexibility ':read'." config)))
      (if (string? initial-tx)
-       (update merged-config :initial-tx (fn [path] (-> path slurp read-string)))
+       #?(:clj (update merged-config :initial-tx (fn [path] (-> path slurp read-string)))
+          :cljs (throw (ex-info ":initial-tx from path is not supported in cljs at this time" merged-config)))
        merged-config))))
 
 ;; deprecation begin
