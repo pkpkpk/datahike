@@ -6,7 +6,7 @@
             [datahike.gc :as gc]
             [datahike.tools :as dt :refer [throwable-promise get-time-ms]]
             [clojure.core.async :refer [chan close! promise-chan put! go go-loop <! >! poll! buffer timeout]])
-  (:import [clojure.core.async.impl.channels ManyToManyChannel]))
+  #?(:clj (:import [clojure.core.async.impl.channels ManyToManyChannel])))
 
 (defn chan? [x]
   (instance? ManyToManyChannel x))
