@@ -1,6 +1,7 @@
 (ns datahike.db.search
   (:require
-   [clojure.core.cache.wrapped :as cw]
+   #?(:clj [clojure.core.cache.wrapped :as cw]
+      :cljs [cljs.cache.wrapped :as cw])
    [datahike.array :refer [a=]]
    [datahike.constants :refer [e0 tx0 emax txmax]]
    [datahike.datom :refer [datom datom-tx datom-added type-hint-datom]]
