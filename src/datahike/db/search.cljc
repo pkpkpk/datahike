@@ -1,4 +1,5 @@
 (ns datahike.db.search
+  #?(:cljs (:require-macros [datahike.db.search :refer [lookup-strategy]]))
   (:require
    #?(:clj [clojure.core.cache.wrapped :as cw]
       :cljs [cljs.cache.wrapped :as cw])
