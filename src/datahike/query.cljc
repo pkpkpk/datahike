@@ -1303,7 +1303,10 @@
 (defmacro make-vec-lookup-ref-replacer [range-length]
   (let [inds (gensym)
         replacer (gensym)
-        tuple (gensym)]
+        tuple (gensym)
+        ex-sym# (if (get-in &env [:ns])
+                  'js/Error
+                  Exception)]
     `(fn tree-fn# [~replacer ~inds]
        ~(dt/range-subset-tree
          range-length inds
@@ -1313,7 +1316,7 @@
                 ~(mapv (fn [index i] `(~replacer ~index (nth ~tuple ~i)))
                        pinds
                        (range))
-                (catch #?(:clj Exception :cljs js/Error) e# nil))))))))
+                (catch ~ex-sym# e# nil))))))))
 
 (def vec-lookup-ref-replacer (make-vec-lookup-ref-replacer 5))
 
