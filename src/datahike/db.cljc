@@ -18,7 +18,7 @@
    [taoensso.timbre :refer [warn]])
   #?(:cljs (:require-macros [datahike.db :refer [defrecord-updatable]]
                             [datahike.datom :refer [combine-cmp datom]]
-                            [datahike.tools :refer [case-tree raise]]))
+                            [datahike.tools :refer [raise]]))
   (:refer-clojure :exclude [seqable?])
   #?(:clj (:import [clojure.lang AMapEntry ITransientCollection IEditableCollection IPersistentCollection Seqable
                     IHashEq Associative IKeywordLookup ILookup]
