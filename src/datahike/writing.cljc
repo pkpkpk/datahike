@@ -186,7 +186,7 @@
 
 (extend-protocol PDatabaseManager
   #?(:clj String :cljs string)
-  (-create-database [uri opts]
+  (-create-database #?(:clj [uri & opts] :cljs [uri opts])
     (-create-database (dc/uri->config uri) opts))
 
   (-delete-database [uri]
