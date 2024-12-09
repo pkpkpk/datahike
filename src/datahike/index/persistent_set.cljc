@@ -271,10 +271,11 @@
 
 ;; temporary import from psset until public
 (defn- map->settings ^Settings [m]
-  (Settings.
-   (int (or (:branching-factor m) 0))
-   nil ;; weak ref default
-   ))
+  #?(:cljs m
+     :clj (Settings.
+            (int (or (:branching-factor m) 0))
+            nil                                             ;; weak ref default
+            )))
 
 (defmethod di/add-konserve-handlers :datahike.index/persistent-set [config store]
   ;; deal with circular reference between storage and store
