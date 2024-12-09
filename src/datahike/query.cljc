@@ -313,7 +313,7 @@
                                          true (map vector (cons x more) more))
                             :cljs (apply >= x more)))
 
-  Object ;; default
+  #?(:clj Object :cljs object) ;; default
   (-strictly-decreasing? [x more] (reduce (fn [res [v1 s2]] (if (neg? (compare  v1 s2))
                                                               res
                                                               (reduced false)))
