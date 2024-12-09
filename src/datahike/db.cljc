@@ -109,9 +109,7 @@
 
 #?(:clj
    (defn- make-record-updatable-cljs [name fields & impls]
-     `(do
-        (defrecord ~name ~fields)
-        (extend-type ~name ~@impls))))
+     `(defrecord ~name ~fields ~@impls)))
 
 #?(:clj
    (defmacro defrecord-updatable [name fields & impls]
