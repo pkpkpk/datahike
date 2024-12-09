@@ -1,7 +1,7 @@
 (ns datahike.api
   "Public API for datahike. Expanded from api.specification."
   (:refer-clojure :exclude [filter])
-  #?(:cljs (:require-macros [datahike.api :refer [emit-api emit-api']]))
+  #?(:cljs (:require-macros [datahike.api :refer [emit-api]]))
   (:require [datahike.connector :as dc]
             [datahike.config :as config]
             [datahike.api.specification :refer [api-specification spec-args->argslist]]
